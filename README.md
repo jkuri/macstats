@@ -3,6 +3,7 @@ node script for you mac stats
 
 ## Example output:
 
+```shell
 --- Battery Stats ---
 Charged:         100%
 Capacity:        92%
@@ -13,3 +14,8 @@ Maximum Charge:  6329 mAh
 Design Capacity: 6900 mAh
 Time Remaining:  0.0 h
 Temperature:     30.29°C
+```
+
+## Todo
+
+Currently working only for battery status.
