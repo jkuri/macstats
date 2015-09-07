@@ -33,7 +33,7 @@
     "node": "0.12.4"
   },
   "preferGlobal": "true",
-  "bin": {
-    "macstats" : "macstats.js"
+  "bin" : { 
+    "macstats" : "./macstats.js" } 
   }
 }
