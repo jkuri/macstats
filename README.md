@@ -12,7 +12,7 @@ Max Cycle Count: 1000
 Current Charge:  6329 mAh
 Maximum Charge:  6329 mAh
 Design Capacity: 6900 mAh
-Time Remaining:  0.0 h
+Time Remaining:  8.12 h
 Temperature:     30.29°C
 ```
 
