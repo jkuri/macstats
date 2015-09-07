@@ -1,0 +1,32 @@
+{
+  "name": "macstatsjs",
+  "version": "0.3.0",
+  "description": "mac stats in node ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jkuri/macstatsJS.git"
+  },
+  "keywords": [
+    "mac",
+    "stats",
+    "apple",
+    "status",
+    "battery",
+    "cpu",
+    "fan"
+  ],
+  "author": "Jan Kuri <jkuri88@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jkuri/macstatsJS/issues"
+  },
+  "homepage": "https://github.com/jkuri/macstatsJS#readme",
+  "dependencies" : { 
+    "q" : "1.4.1"
+  },
+  "os" : [ "darwin" ]
+}
