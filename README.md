@@ -23,7 +23,7 @@ Time Remaining:  6.54 h
 Temperature:     30.06°C
 ```
 
-## Insallation
+## Installation
 
 ```shell
 npm i macstats -g

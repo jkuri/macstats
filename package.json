@@ -31,5 +31,9 @@
   "os" : [ "darwin" ],
   "engines": {
     "node": "0.12.4"
+  },
+  "preferGlobal": "true",
+  "bin": {
+    "macstats" : "macstats.js"
   }
 }
