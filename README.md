@@ -36,3 +36,7 @@ sudo ln -s `mdfind "macstats.js" | head -1` /usr/local/bin/macstats
 ```shell
 macstats
 ```
+
+## Thanks
+
+Thanks [Massimiliano Marcon](https://github.com/mmarcon) for SMC C++ code in v8.
