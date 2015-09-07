@@ -1,4 +1,4 @@
-# macstatsJS
+# macstats
 node script for you mac stats
 
 ## Example output:
@@ -26,8 +26,5 @@ Temperature:     30.06°C
 ## Insallation
 
 ```shell
-npm i macstatsjs
-cd macstatsjs
-node-gyp configure
-node-gyp build
+npm i macstats -g
 ```

@@ -1,5 +1,5 @@
 {
-  "name": "macstatsjs",
+  "name": "macstats",
   "version": "0.3.0",
   "description": "mac stats in node ",
   "main": "index.js",
@@ -28,5 +28,8 @@
   "dependencies" : { 
     "q" : "1.4.1"
   },
-  "os" : [ "darwin" ]
+  "os" : [ "darwin" ],
+  "engines": {
+    "node": "0.12.4"
+  }
 }
