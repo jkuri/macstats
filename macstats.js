@@ -1,3 +1,5 @@
+#! /usr/bin/env node
+
 /** 
 	macstatsJS
 	Description: Node script for displaying you mac stats
