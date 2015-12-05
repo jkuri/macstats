@@ -27,8 +27,6 @@ Temperature:     30.06°C
 
 ```shell
 npm i macstats -g
-
-sudo ln -s `mdfind "macstats.js" | head -1` /usr/local/bin/macstats
 ```
 
 ## Run

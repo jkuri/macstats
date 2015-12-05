@@ -1,14 +1,14 @@
 {
   "name": "macstats",
-  "version": "0.3.0",
-  "description": "mac stats in node ",
+  "version": "0.4.0",
+  "description": "mac stats in node",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jkuri/macstatsJS.git"
+    "url": "git+https://github.com/jkuri/macstats.git"
   },
   "keywords": [
     "mac",
@@ -24,7 +24,7 @@
   "bugs": {
     "url": "https://github.com/jkuri/macstatsJS/issues"
   },
-  "homepage": "https://github.com/jkuri/macstatsJS#readme",
+  "homepage": "https://github.com/jkuri/macstats",
   "dependencies" : { 
     "q" : "1.4.1"
   },
@@ -34,6 +34,6 @@
   },
   "preferGlobal": "true",
   "bin" : { 
-    "macstats" : "./macstats.js" } 
+    "macstats" : "bin/macstats.js" } 
   }
 }

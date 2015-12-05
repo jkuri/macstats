@@ -6,8 +6,8 @@
 //	Licence: MIT
 
 var cpu = require('./lib/cpu.js').cpu,
-	fan = require('./lib/fan.js').fan,
-	battery = require('./lib/battery.js').battery;
+	  fan = require('./lib/fan.js').fan,
+    battery = require('./lib/battery.js').battery;
 
 cpu.display();
 fan.display();
