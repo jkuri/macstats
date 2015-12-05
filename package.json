@@ -34,6 +34,6 @@
   },
   "preferGlobal": "true",
   "bin" : { 
-    "macstats" : "bin/macstats.js" } 
+    "macstats" : "bin/macstats"
   }
 }
