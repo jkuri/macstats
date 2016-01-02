@@ -55,7 +55,7 @@ API().then((api) => {
 ## API Reference
 
 Object   | Data                      | Description
----------------------------------------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------------------------------------------------------------------------
 battery  | Object                    | Battery Data [Object]
          | battery_installed         | Is battery installed, true|false [Boolean]
          | design_capacity           | Battery design capacity in mAh [Int]
@@ -68,8 +68,8 @@ battery  | Object                    | Battery Data [Object]
          | temparature               | Battery temperature in °C [Float]
          | charged                   | Current battery charge percentage [Int]
          | time_remaining            | Remaining time in minutes, if plugged in time until full, otherwise time until empty [Int]
-         | time_remaining_hours      | Time remaining in hours. Use in a combination with `time_remaining_minutes` [Int]
-         | time_remaining_minutes    | Time remaining in minutes. Use in a combination with `time_remaining_hours` [Int]
+         | time_remaining_hours      | Time remaining in hours. Use in a combination with *time_remaining_minutes* [Int]
+         | time_remaining_minutes    | Time remaining in minutes. Use in a combination with *time_remaining_hours* [Int]
 cpu      | Object                    | CPU Data [Object]
          | temp                      | CPU Temperature in °C [Float]
 Fan      | Object                    | Fans Data [Object]
