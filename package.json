@@ -1,8 +1,8 @@
 {
   "name": "macstats",
-  "version": "0.5.0",
-  "description": "mac stats in node",
-  "main": "index.js",
+  "version": "0.7.0",
+  "description": "Mac OS X statistics",
+  "main": "macstats.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,6 +11,7 @@
     "url": "git+https://github.com/jkuri/macstats.git"
   },
   "keywords": [
+    "os x",
     "mac",
     "stats",
     "apple",
@@ -25,15 +26,18 @@
     "url": "https://github.com/jkuri/macstatsJS/issues"
   },
   "homepage": "https://github.com/jkuri/macstats",
-  "dependencies" : { 
-    "q" : "1.4.1"
+  "dependencies": {
+    "chalk": "^1.1.1",
+    "q": "1.4.1"
   },
-  "os" : [ "darwin" ],
+  "os": [
+    "darwin"
+  ],
   "engines": {
     "node": "0.12.4"
   },
   "preferGlobal": "true",
-  "bin" : { 
-    "macstats" : "bin/macstats"
+  "bin": {
+    "macstats": "bin/macstats"
   }
 }

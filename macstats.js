@@ -5,9 +5,9 @@
 //	Author: Jan Kuri <jkuri88@gmail.com>
 //	Licence: MIT
 
-var cpu = require('./lib/cpu.js').cpu,
-	  fan = require('./lib/fan.js').fan,
-    battery = require('./lib/battery.js').battery;
+const cpu      = require('./lib/cpu');
+const fan      = require('./lib/fan');
+const battery  = require('./lib/battery');
 
 cpu.display();
 fan.display();
