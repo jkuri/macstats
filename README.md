@@ -57,7 +57,6 @@ API().then((api) => {
 Object   | Data                      | Description
 ---------------------------------------------------------------------------------------------------------------------------------
 battery  | Object                    | Battery Data [Object]
----------------------------------------------------------------------------------------------------------------------------------
          | battery_installed         | Is battery installed, true|false [Boolean]
          | design_capacity           | Battery design capacity in mAh [Int]
          | max_capacity              | Max battery capacity in mAh [Int]
@@ -71,13 +70,9 @@ battery  | Object                    | Battery Data [Object]
          | time_remaining            | Remaining time in minutes, if plugged in time until full, otherwise time until empty [Int]
          | time_remaining_hours      | Time remaining in hours. Use in a combination with `time_remaining_minutes` [Int]
          | time_remaining_minutes    | Time remaining in minutes. Use in a combination with `time_remaining_hours` [Int]
----------------------------------------------------------------------------------------------------------------------------------
 cpu      | Object                    | CPU Data [Object]
----------------------------------------------------------------------------------------------------------------------------------
          | temp                      | CPU Temperature in °C [Float]
----------------------------------------------------------------------------------------------------------------------------------
 Fan      | Object                    | Fans Data [Object]
----------------------------------------------------------------------------------------------------------------------------------
          | num                       | Total number of fans [Int]
          | fans                      | Array of Objects (properties: id [Int], rpm [Int]), example: [ { id: 0, rpm: 2007 }, { id: 1, rpm: 1999 } ] }
 
