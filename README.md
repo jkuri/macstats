@@ -54,27 +54,24 @@ API().then((api) => {
 
 ## API Reference
 
-Object   | Data                      | Description
------------------------------------------------------------------------------------------------------------------------------------------------------
-battery  | Object                    | Battery Data [Object]
-         | battery_installed         | Is battery installed, true|false [Boolean]
-         | design_capacity           | Battery design capacity in mAh [Int]
-         | max_capacity              | Max battery capacity in mAh [Int]
-         | current_capacity          | Current battery capacuty in mAh [Int]
-         | percentage                | Current capacity percentage [Int]
-         | design_cycle_count        | Design cycle count [Int]
-         | cycle_count               | Current battery cycle count [Int]
-         | cycle_percentage          | Cycle count percentage [Int]
-         | temparature               | Battery temperature in °C [Float]
-         | charged                   | Current battery charge percentage [Int]
-         | time_remaining            | Remaining time in minutes, if plugged in time until full, otherwise time until empty [Int]
-         | time_remaining_hours      | Time remaining in hours. Use in a combination with *time_remaining_minutes* [Int]
-         | time_remaining_minutes    | Time remaining in minutes. Use in a combination with *time_remaining_hours* [Int]
-cpu      | Object                    | CPU Data [Object]
-         | temp                      | CPU Temperature in °C [Float]
-Fan      | Object                    | Fans Data [Object]
-         | num                       | Total number of fans [Int]
-         | fans                      | Array of Objects (properties: id [Int], rpm [Int]), example: [ { id: 0, rpm: 2007 }, { id: 1, rpm: 1999 } ] }
+Data                              | Description
+:---------------------------------|:-------------------------------------------------------------------------------------------------------------
+battery.battery_installed         | Is battery installed, true|false [Boolean]
+battery.design_capacity           | Battery design capacity in mAh [Int]
+battery.max_capacity              | Max battery capacity in mAh [Int]
+battery.current_capacity          | Current battery capacuty in mAh [Int]
+battery.percentage                | Current capacity percentage [Int]
+battery.design_cycle_count        | Design cycle count [Int]
+battery.cycle_count               | Current battery cycle count [Int]
+battery.cycle_percentage          | Cycle count percentage [Int]
+battery.temparature               | Battery temperature in °C [Float]
+battery.charged                   | Current battery charge percentage [Int]
+battery.time_remaining            | Remaining time in minutes, if plugged in time until full, otherwise time until empty [Int]
+battery.time_remaining_hours      | Time remaining in hours. Use in a combination with *time_remaining_minutes* [Int]
+battery.time_remaining_minutes    | Time remaining in minutes. Use in a combination with *time_remaining_hours* [Int]
+cpu.temp                          | CPU Temperature in °C [Float]
+fan.num                           | Total number of fans [Int]
+fan.fans                          | Array of Objects (properties: id [Int], rpm [Int]), example: [ { id: 0, rpm: 2007 }, { id: 1, rpm: 1999 } ] }
 
 ## Author
 
