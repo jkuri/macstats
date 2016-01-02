@@ -1,6 +1,6 @@
 {
   "name": "macstats",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Mac OS X statistics",
   "main": "macstats.js",
   "scripts": {
@@ -33,9 +33,6 @@
   "os": [
     "darwin"
   ],
-  "engines": {
-    "node": "0.12.4"
-  },
   "preferGlobal": "true",
   "bin": {
     "macstats": "bin/macstats"

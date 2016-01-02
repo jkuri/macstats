@@ -56,7 +56,7 @@ API().then((api) => {
 
 Data                              | Description
 :---------------------------------|:-------------------------------------------------------------------------------------------------------------
-battery.battery_installed         | Is battery installed, true|false [Boolean]
+battery.battery_installed         | Is battery installed, true or false [Boolean]
 battery.design_capacity           | Battery design capacity in mAh [Int]
 battery.max_capacity              | Max battery capacity in mAh [Int]
 battery.current_capacity          | Current battery capacuty in mAh [Int]
