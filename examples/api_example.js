@@ -1,9 +1,5 @@
 'use strict';
 
-let API = require('../lib/api');
+let macstats = require('../bin/macstats');
 
-API().then((api) => {
-  console.log(api.battery);
-  console.log(api.cpu);
-  console.log(api.fan);
-});
+console.log(macstats);

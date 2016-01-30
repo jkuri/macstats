@@ -37,19 +37,12 @@ macstats
 
 ## API
 
-Include `/lib/api` in your script if you want to use the API. API returns a promise with object of data.
-Example:
-
 ````JavaScript
 'use strict';
 
-let API = require('../lib/api');
+let macstats = require('macstats');
 
-API().then((api) => {
-  console.log(api.battery);
-  console.log(api.cpu);
-  console.log(api.fan);
-});
+console.log(macstats);
 ````
 
 ## API Reference

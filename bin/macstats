@@ -1,3 +1,19 @@
 #!/usr/bin/env node
 
-require('../macstats.js');
+//  macstats
+//  Description: Node script for displaying you mac stats
+//  Author: Jan Kuri <jkuri88@gmail.com>
+//  Licence: MIT
+
+const cpu             = require('../lib/cpu');
+const fan             = require('../lib/fan');
+const battery         = require('../lib/battery');
+
+if (!module.parent) {
+  cpu.display();
+  fan.display();
+  battery.display();
+} 
+else {
+  module.exports = require('../lib/api');
+}

@@ -1,8 +1,8 @@
 {
   "name": "macstats",
-  "version": "0.7.2",
+  "version": "1.0.0",
   "description": "Mac OS X statistics",
-  "main": "macstats.js",
+  "main": "./bin/macstats",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -27,8 +27,7 @@
   },
   "homepage": "https://github.com/jkuri/macstats",
   "dependencies": {
-    "chalk": "^1.1.1",
-    "q": "1.4.1"
+    "chalk": "^1.1.1"
   },
   "os": [
     "darwin"
