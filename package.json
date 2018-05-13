@@ -2,9 +2,16 @@
   "name": "macstats",
   "version": "1.0.0",
   "description": "Mac OS X statistics",
-  "main": "./bin/macstats",
+  "main": "./dist/index.js",
+  "preferGlobal": true,
+  "bin": {
+    "macstats": "bin/macstats"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "prebuild": "node-gyp build",
+    "build": "tsc -p tsconfig.json",
+    "prepublishOnly": "npm run build",
+    "postinstall": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -18,22 +25,22 @@
     "status",
     "battery",
     "cpu",
-    "fan"
+    "fan",
+    "darwin"
   ],
   "author": "Jan Kuri <jkuri88@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jkuri/macstatsJS/issues"
+    "url": "https://github.com/jkuri/macstats/issues"
   },
   "homepage": "https://github.com/jkuri/macstats",
   "dependencies": {
-    "chalk": "^1.1.1"
+    "@types/node": "^10.0.8",
+    "chalk": "^2.4.1",
+    "node-gyp": "^3.6.2",
+    "typescript": "^2.8.3"
   },
   "os": [
     "darwin"
-  ],
-  "preferGlobal": "true",
-  "bin": {
-    "macstats": "bin/macstats"
-  }
+  ]
 }

@@ -18,7 +18,7 @@
  */
 
 #ifndef BUILDING_NODE_EXTENSION
-    #define BUILDING_NODE_EXTENSION
+#define BUILDING_NODE_EXTENSION
 #endif
 
 #include <stdio.h>
@@ -33,64 +33,73 @@ using namespace v8;
 
 static io_connect_t conn;
 
-UInt32 _strtoul(char *str, int size, int base) {
+UInt32 _strtoul(char *str, int size, int base)
+{
     UInt32 total = 0;
     int i;
 
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < size; i++)
+    {
         if (base == 16)
             total += str[i] << (size - 1 - i) * 8;
         else
-           total += (unsigned char) (str[i] << (size - 1 - i) * 8);
+            total += (unsigned char)(str[i] << (size - 1 - i) * 8);
     }
     return total;
 }
 
-float _strtof(char *str, int size, int e) {
+float _strtof(char *str, int size, int e)
+{
     float total = 0;
     int i;
 
-    for (i = 0; i < size; i++) {
+    for (i = 0; i < size; i++)
+    {
         if (i == (size - 1))
-           total += (str[i] & 0xff) >> e;
+            total += (str[i] & 0xff) >> e;
         else
-           total += str[i] << (size - 1 - i) * (8 - e);
+            total += str[i] << (size - 1 - i) * (8 - e);
     }
 
     return total;
 }
 
-void _ultostr(char *str, UInt32 val) {
+void _ultostr(char *str, UInt32 val)
+{
     str[0] = '\0';
     sprintf(str, "%c%c%c%c",
-            (unsigned int) val >> 24,
-            (unsigned int) val >> 16,
-            (unsigned int) val >> 8,
-            (unsigned int) val);
+            (unsigned int)val >> 24,
+            (unsigned int)val >> 16,
+            (unsigned int)val >> 8,
+            (unsigned int)val);
 }
 
-kern_return_t SMCOpen(void) {
+kern_return_t SMCOpen(void)
+{
     kern_return_t result;
     io_iterator_t iterator;
-    io_object_t   device;
+    io_object_t device;
 
     CFMutableDictionaryRef matchingDictionary = IOServiceMatching("AppleSMC");
     result = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDictionary, &iterator);
-    if (result != kIOReturnSuccess) {
+    if (result != kIOReturnSuccess)
+    {
         printf("Error: IOServiceGetMatchingServices() = %08x\n", result);
         return 1;
     }
 
     device = IOIteratorNext(iterator);
     IOObjectRelease(iterator);
-    if (device == 0) {
+    if (device == 0)
+    {
         printf("Error: no SMC found\n");
         return 1;
     }
 
     result = IOServiceOpen(device, mach_task_self(), 0, &conn);
     IOObjectRelease(device);
-    if (result != kIOReturnSuccess) {
+    if (result != kIOReturnSuccess)
+    {
         printf("Error: IOServiceOpen() = %08x\n", result);
         return 1;
     }
@@ -98,38 +107,39 @@ kern_return_t SMCOpen(void) {
     return kIOReturnSuccess;
 }
 
-kern_return_t SMCClose() {
+kern_return_t SMCClose()
+{
     return IOServiceClose(conn);
 }
 
-
-kern_return_t SMCCall(int index, SMCKeyData_t *inputStructure, SMCKeyData_t *outputStructure) {
-    size_t   structureInputSize;
-    size_t   structureOutputSize;
+kern_return_t SMCCall(int index, SMCKeyData_t *inputStructure, SMCKeyData_t *outputStructure)
+{
+    size_t structureInputSize;
+    size_t structureOutputSize;
 
     structureInputSize = sizeof(SMCKeyData_t);
     structureOutputSize = sizeof(SMCKeyData_t);
 
-    #if MAC_OS_X_VERSION_10_5
-    return IOConnectCallStructMethod( conn, index,
-                            // inputStructure
-                            inputStructure, structureInputSize,
-                            // ouputStructure
-                            outputStructure, &structureOutputSize );
-    #else
-    return IOConnectMethodStructureIStructureO( conn, index,
-                                                structureInputSize, /* structureInputSize */
-                                                &structureOutputSize,   /* structureOutputSize */
-                                                inputStructure,        /* inputStructure */
-                                                outputStructure);       /* ouputStructure */
-    #endif
-
+#if MAC_OS_X_VERSION_10_5
+    return IOConnectCallStructMethod(conn, index,
+                                     // inputStructure
+                                     inputStructure, structureInputSize,
+                                     // ouputStructure
+                                     outputStructure, &structureOutputSize);
+#else
+    return IOConnectMethodStructureIStructureO(conn, index,
+                                               structureInputSize,   /* structureInputSize */
+                                               &structureOutputSize, /* structureOutputSize */
+                                               inputStructure,       /* inputStructure */
+                                               outputStructure);     /* ouputStructure */
+#endif
 }
 
-kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val) {
+kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val)
+{
     kern_return_t result;
-    SMCKeyData_t  inputStructure;
-    SMCKeyData_t  outputStructure;
+    SMCKeyData_t inputStructure;
+    SMCKeyData_t outputStructure;
 
     memset(&inputStructure, 0, sizeof(SMCKeyData_t));
     memset(&outputStructure, 0, sizeof(SMCKeyData_t));
@@ -156,15 +166,19 @@ kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val) {
     return kIOReturnSuccess;
 }
 
-double SMCGetTemperature() {
+double SMCGetTemperature()
+{
     SMCVal_t val;
     kern_return_t result;
 
-    result = SMCReadKey((char*) SMC_KEY_CPU_TEMP, &val);
-    if (result == kIOReturnSuccess) {
+    result = SMCReadKey((char *)SMC_KEY_CPU_TEMP, &val);
+    if (result == kIOReturnSuccess)
+    {
         // read succeeded - check returned value
-        if (val.dataSize > 0) {
-            if (strcmp(val.dataType, DATATYPE_SP78) == 0) {
+        if (val.dataSize > 0)
+        {
+            if (strcmp(val.dataType, DATATYPE_SP78) == 0)
+            {
                 // convert sp78 value to temperature
                 int intValue = val.bytes[0] * 256 + (unsigned char)val.bytes[1];
                 return intValue / 256.0;
@@ -175,15 +189,19 @@ double SMCGetTemperature() {
     return 0.0;
 }
 
-int SMCGetFanNumber() {
+int SMCGetFanNumber()
+{
     SMCVal_t val;
     kern_return_t result;
 
-    result = SMCReadKey((char*) SMC_KEY_FAN_NUMBER, &val);
-    if (result == kIOReturnSuccess) {
+    result = SMCReadKey((char *)SMC_KEY_FAN_NUMBER, &val);
+    if (result == kIOReturnSuccess)
+    {
         // read succeeded - check returned value
-        if (val.dataSize > 0) {
-            if (strcmp(val.dataType, DATATYPE_UINT8) == 0) {
+        if (val.dataSize > 0)
+        {
+            if (strcmp(val.dataType, DATATYPE_UINT8) == 0)
+            {
                 int intValue = _strtoul((char *)val.bytes, val.dataSize, 10);
                 return intValue;
             }
@@ -193,7 +211,8 @@ int SMCGetFanNumber() {
     return 0;
 }
 
-int SMCGetFanRPM(int fan_number) {
+int SMCGetFanRPM(int fan_number)
+{
     SMCVal_t val;
     kern_return_t result;
     UInt32Char_t key;
@@ -201,10 +220,13 @@ int SMCGetFanRPM(int fan_number) {
     sprintf(key, SMC_PKEY_FAN_RPM, fan_number);
 
     result = SMCReadKey(key, &val);
-    if (result == kIOReturnSuccess) {
+    if (result == kIOReturnSuccess)
+    {
         // read succeeded - check returned value
-        if (val.dataSize > 0) {
-            if (strcmp(val.dataType, DATATYPE_FPE2) == 0) {
+        if (val.dataSize > 0)
+        {
+            if (strcmp(val.dataType, DATATYPE_FPE2) == 0)
+            {
                 int intValue = _strtof(val.bytes, val.dataSize, 2);
                 return intValue;
             }
@@ -214,8 +236,9 @@ int SMCGetFanRPM(int fan_number) {
     return 0;
 }
 
-void Temperature(const FunctionCallbackInfo<Value>& args) {
-    Isolate* isolate = Isolate::GetCurrent();
+void Temperature(const FunctionCallbackInfo<Value> &args)
+{
+    Isolate *isolate = Isolate::GetCurrent();
     HandleScope scope(isolate);
     SMCOpen();
     double temperature = SMCGetTemperature();
@@ -223,8 +246,9 @@ void Temperature(const FunctionCallbackInfo<Value>& args) {
     args.GetReturnValue().Set(Number::New(isolate, temperature));
 }
 
-void Fans(const FunctionCallbackInfo<Value>&  args) {
-    Isolate* isolate = Isolate::GetCurrent();
+void Fans(const FunctionCallbackInfo<Value> &args)
+{
+    Isolate *isolate = Isolate::GetCurrent();
     HandleScope scope(isolate);
     SMCOpen();
     int numberOfFans = SMCGetFanNumber();
@@ -232,17 +256,20 @@ void Fans(const FunctionCallbackInfo<Value>&  args) {
     args.GetReturnValue().Set(Number::New(isolate, numberOfFans));
 }
 
-void FanRpm(const FunctionCallbackInfo<Value>&  args) {
-    Isolate* isolate = Isolate::GetCurrent();
+void FanRpm(const FunctionCallbackInfo<Value> &args)
+{
+    Isolate *isolate = Isolate::GetCurrent();
     HandleScope scope(isolate);
-    if (args.Length() < 1) {
+    if (args.Length() < 1)
+    {
         //Fan number (id) isn't specified
         args.GetReturnValue().Set(Undefined(isolate));
         return;
     }
-    if (!args[0]->IsNumber()) {
+    if (!args[0]->IsNumber())
+    {
         isolate->ThrowException(Exception::TypeError(
-        String::NewFromUtf8(isolate, "Expected number")));
+            String::NewFromUtf8(isolate, "Expected number")));
         return;
     }
     int fanNumber = args[0]->Int32Value();
@@ -252,7 +279,8 @@ void FanRpm(const FunctionCallbackInfo<Value>&  args) {
     args.GetReturnValue().Set(Number::New(isolate, rpm));
 }
 
-void Init(v8::Handle<Object> exports) {
+void Init(v8::Handle<Object> exports)
+{
     NODE_SET_METHOD(exports, "temperature", Temperature);
     NODE_SET_METHOD(exports, "fans", Fans);
     NODE_SET_METHOD(exports, "fanRpm", FanRpm);
