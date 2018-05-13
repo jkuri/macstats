@@ -1,6 +1,6 @@
 {
   "name": "macstats",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Mac OS X statistics",
   "main": "./dist/index.js",
   "preferGlobal": true,
