@@ -35,10 +35,10 @@
   },
   "homepage": "https://github.com/jkuri/macstats",
   "dependencies": {
-    "@types/node": "^10.0.8",
+    "@types/node": "^10.12.15",
     "chalk": "^2.4.1",
-    "node-gyp": "^3.6.2",
-    "typescript": "^2.8.3"
+    "node-gyp": "^3.8.0",
+    "typescript": "^3.2.2"
   },
   "os": [
     "darwin"
