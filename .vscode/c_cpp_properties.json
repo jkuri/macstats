@@ -4,12 +4,14 @@
             "name": "Mac",
             "browse": {
                 "path": [
-                    "${workspaceFolder}"
+                    "${workspaceFolder}",
+                    "/Users/jan/.nvm/versions/node/v11.4.0/include/node"
                 ],
                 "limitSymbolsToIncludedHeaders": true
             },
             "includePath": [
-                "${workspaceFolder}"
+                "${workspaceFolder}",
+                "/Users/jan/.nvm/versions/node/v11.4.0/include/node"
             ],
             "defines": [],
             "macFrameworkPath": [
