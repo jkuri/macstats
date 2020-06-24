@@ -1,6 +1,6 @@
 {
   "name": "macstats",
-  "version": "2.2.0",
+  "version": "3.0.0",
   "description": "Mac OS X statistics",
   "main": "./dist/index.js",
   "preferGlobal": true,
@@ -35,10 +35,11 @@
   },
   "homepage": "https://github.com/jkuri/macstats",
   "dependencies": {
-    "@types/node": "^10.12.15",
-    "chalk": "^2.4.1",
-    "node-gyp": "^3.8.0",
-    "typescript": "^3.2.2"
+    "@types/node": "^14.0.14",
+    "chalk": "^4.1.0",
+    "nan": "^2.14.1",
+    "node-gyp": "^7.0.0",
+    "typescript": "^3.9.5"
   },
   "os": [
     "darwin"

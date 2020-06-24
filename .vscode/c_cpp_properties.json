@@ -1,28 +1,27 @@
 {
-    "configurations": [
-        {
-            "name": "Mac",
-            "browse": {
-                "path": [
-                    "${workspaceFolder}",
-                    "/Users/jan/.nvm/versions/node/v11.4.0/include/node"
-                ],
-                "limitSymbolsToIncludedHeaders": true
-            },
-            "includePath": [
-                "${workspaceFolder}",
-                "/Users/jan/.nvm/versions/node/v11.4.0/include/node"
-            ],
-            "defines": [],
-            "macFrameworkPath": [
-                "/System/Library/Frameworks",
-                "/Library/Frameworks"
-            ],
-            "compilerPath": "/usr/bin/clang",
-            "cStandard": "c11",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "clang-x64"
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "name": "Mac",
+      "browse": {
+        "path": [
+          "${workspaceFolder}",
+          "${workspaceFolder}/node_modules/nan",
+          "/Users/jan/.nvm/versions/node/v14.4.0/include/node"
+        ],
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "${workspaceFolder}",
+        "${workspaceFolder}/node_modules/nan",
+        "/Users/jan/.nvm/versions/node/v14.4.0/include/node"
+      ],
+      "defines": [],
+      "macFrameworkPath": ["/System/Library/Frameworks", "/Library/Frameworks"],
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "clang-x64"
+    }
+  ],
+  "version": 4
 }
