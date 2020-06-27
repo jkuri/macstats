@@ -20,15 +20,16 @@ export interface Battery {
 
 const cmd = `ioreg -rn AppleSmartBattery`;
 
-export function getBatteryData(): Promise<Battery> {
-  return readData().then(data => parseData(data));
+export async function getBatteryData(): Promise<Battery> {
+  const data = await readData();
+  return parseData(data);
 }
 
 export function getBatteryDataSync(): Battery {
   return parseData(readDataSync());
 }
 
-function readData(): Promise<string> {
+async function readData(): Promise<string> {
   return new Promise((resolve, reject) => {
     exec(cmd, { encoding: 'utf8' }, (err: Error, stdout: string, stderr: string) => {
       if (err || stderr !== '') {
@@ -100,21 +101,13 @@ function parseData(data: string): Battery {
   }, {} as Battery);
 
   return Object.assign({}, stats, {
-    percentage: Number(stats.max_capacity / stats.design_capacity * 100).toFixed(0),
-    cycle_percentage: Number(((stats.cycle_count / stats.design_cycle_count) * 100).toFixed(0)),
-    temperature: Number((stats.temperature / 100).toFixed(0)),
+    percentage: Math.round(Number((stats.max_capacity / stats.design_capacity) * 100)),
+    cycle_percentage: Math.round(Number((stats.cycle_count / stats.design_cycle_count) * 100)),
+    temperature: Math.round(Number(stats.temperature / 100)),
     time_remaining_formatted: secondsToHms(stats.time_remaining)
   });
 }
 
-function secondsToHms(d: number) {
-  d = Number(d);
-  var h = Math.floor(d / 3600);
-  var m = Math.floor(d % 3600 / 60);
-  var s = Math.floor(d % 3600 % 60);
-
-  var hDisplay = h > 0 ? h + (h == 1 ? " hour, " : " hours, ") : "";
-  var mDisplay = m > 0 ? m + (m == 1 ? " minute, " : " minutes, ") : "";
-  var sDisplay = s > 0 ? s + (s == 1 ? " second" : " seconds") : "";
-  return hDisplay + mDisplay + sDisplay === '' ? '/' : hDisplay + mDisplay + sDisplay;
+function secondsToHms(s: number): string {
+  return s === 0 ? '/' : new Date(1000 * s).toISOString().substr(11, 8);
 }

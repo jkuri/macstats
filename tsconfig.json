@@ -8,7 +8,7 @@
     "target": "es5",
     "esModuleInterop": true,
     "typeRoots": ["node_modules/@types"],
-    "lib": ["es2017"]
+    "lib": ["es2020"]
   },
   "include": ["src/**/*.ts"]
 }

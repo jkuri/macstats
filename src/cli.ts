@@ -8,7 +8,7 @@ Promise.resolve()
   .then(data => {
     const cpu = [
       chalk.yellow('----- CPU -----'),
-      `Temperature: ${chalk.green(String(data.temperature) + String.fromCharCode(0x00B0) + 'C')}`,
+      `Temperature: ${chalk.green(String(data.temperature) + String.fromCharCode(0x00b0) + 'C')}`,
       ''
     ];
     console.log(cpu.join('\n'));
@@ -37,7 +37,7 @@ Promise.resolve()
         `Maximum Charge:     ` + chalk.green(String(data.max_capacity) + ' mAh'),
         `Design Capacity:    ` + chalk.green(String(data.design_capacity) + ' mAh'),
         `Time Remaining:     ` + chalk.green(String(data.time_remaining_formatted)),
-        `Temperature:        ` + chalk.green(String(data.temperature) + String.fromCharCode(0x00B0) + 'C')
+        `Temperature:        ` + chalk.green(String(data.temperature) + String.fromCharCode(0x00b0) + 'C')
       ]);
     } else {
       battery = battery.concat([`Battery Installed:  ` + chalk.red('✗')]);

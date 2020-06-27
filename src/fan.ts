@@ -15,9 +15,8 @@ export function getFanDataSync(): Fan {
 }
 
 function fanData(): Fan {
-  return Array.from(Array(smc.fans()), (_, i) => smc.fanRpm(i))
-    .reduce((prev, curr, i) => {
-      prev[i] = curr;
-      return prev;
-    }, {} as Fan);
+  return Array.from(Array(smc.fans()), (_, i) => smc.fanRpm(i)).reduce((prev, curr, i) => {
+    prev[i] = curr;
+    return prev;
+  }, {} as Fan);
 }

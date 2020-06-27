@@ -5,9 +5,7 @@ export interface CPU {
 }
 
 export function getCpuData(): Promise<CPU> {
-  return new Promise((resolve, reject) => {
-    resolve({ temperature: smc.temperature() });
-  });
+  return Promise.resolve().then(() => ({ temperature: Math.round(smc.temperature()) }));
 }
 
 export function getCpuDataSync(): CPU {
