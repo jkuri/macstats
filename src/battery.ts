@@ -104,7 +104,7 @@ function parseData(data: string): Battery {
     percentage: Math.round(Number((stats.max_capacity / stats.design_capacity) * 100)),
     cycle_percentage: Math.round(Number((stats.cycle_count / stats.design_cycle_count) * 100)),
     temperature: Math.round(Number(stats.temperature / 100)),
-    time_remaining_formatted: secondsToHms(stats.time_remaining)
+    time_remaining_formatted: secondsToHms(stats.time_remaining || 0)
   });
 }
 
