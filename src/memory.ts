@@ -120,4 +120,3 @@ export function getRAMUsageSync(): RAMUsage {
   const raw: RawRAMUsage = smc.getRAMUsageData();
   return parseRAMUsage(raw);
 }
-

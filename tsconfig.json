@@ -13,8 +13,9 @@
     "strict": true,
     "skipLibCheck": true,
     "typeRoots": ["node_modules/@types"],
-    "lib": ["ES2022"]
+    "lib": ["ES2022"],
+    "jsx": "react"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
   "exclude": ["tests/**/*.ts"]
 }

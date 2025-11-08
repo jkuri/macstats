@@ -40,17 +40,20 @@
     "url": "https://github.com/jkuri/macstats/issues"
   },
   "homepage": "https://github.com/jkuri/macstats",
-  "dependencies": {
-    "@types/node": "^24.10.0",
-    "chalk": "^5.6.2",
-    "nan": "^2.23.1",
-    "node-gyp": "^11.5.0",
-    "typescript": "^5.9.3"
-  },
   "os": [
     "darwin"
   ],
+  "dependencies": {
+    "@types/node": "^24.10.0",
+    "chalk": "^5.6.2",
+    "ink": "^6.4.0",
+    "nan": "^2.23.1",
+    "node-gyp": "^11.5.0",
+    "react": "^19.2.0",
+    "typescript": "^5.9.3"
+  },
   "devDependencies": {
+    "@types/react": "^19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.3",
     "@vitest/ui": "^4.0.8",
