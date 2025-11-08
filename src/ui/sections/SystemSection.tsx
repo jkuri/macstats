@@ -8,10 +8,8 @@ interface SystemSectionProps {
 
 export const SystemSection: React.FC<SystemSectionProps> = ({ data }) => {
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="white" paddingX={1}>
-      <Text bold color="white">
-        🖥️ System Information
-      </Text>
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1}>
+      <Text bold>🖥️ System Information</Text>
       <Box marginTop={1} flexDirection="column" paddingLeft={2}>
         <Box flexDirection="row">
           <Box width={12}>

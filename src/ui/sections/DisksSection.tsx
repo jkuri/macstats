@@ -63,9 +63,7 @@ export const DisksSection: React.FC<DisksSectionProps> = ({ disks, detailedMode 
             <Box key={index} flexDirection="column" marginBottom={index < mainDisks.length - 1 ? 1 : 0}>
               <Box flexDirection="row">
                 <Box width={20}>
-                  <Text bold color="white">
-                    {disk.name}
-                  </Text>
+                  <Text bold>{disk.name}</Text>
                 </Box>
                 <Text color={usageColor}>
                   {usedSize} / {totalSize} ({Math.round(disk.usagePercent)}%)

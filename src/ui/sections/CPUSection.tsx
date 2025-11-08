@@ -69,7 +69,7 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
           <Box width={11}>
             <Text dimColor>Load Avg:</Text>
           </Box>
-          <Text color="white">
+          <Text>
             {cpuUsage.loadAvg1.toFixed(2)}, {cpuUsage.loadAvg5.toFixed(2)}, {cpuUsage.loadAvg15.toFixed(2)}
           </Text>
         </Box>

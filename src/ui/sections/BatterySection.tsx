@@ -84,7 +84,7 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
             <Box width={11}>
               <Text dimColor>Time:</Text>
             </Box>
-            <Text color="white">{battery.time_remaining_formatted}</Text>
+            <Text>{battery.time_remaining_formatted}</Text>
           </Box>
         )}
 
@@ -92,7 +92,7 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
           <Box width={11}>
             <Text dimColor>Power:</Text>
           </Box>
-          <Text color="white">
+          <Text>
             {battery.power.toFixed(1)}W ({(battery.voltage / 1000).toFixed(1)}V, {(battery.amperage / 1000).toFixed(2)}
             A)
           </Text>
@@ -102,10 +102,10 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
           <Box width={11}>
             <Text dimColor>Cycles:</Text>
           </Box>
-          <Text color="white">{battery.cycle_count}</Text>
+          <Text>{battery.cycle_count}</Text>
           <Text dimColor> • </Text>
           <Text dimColor>Temp: </Text>
-          <Text color="white">{battery.temperature}°C</Text>
+          <Text>{battery.temperature}°C</Text>
         </Box>
       </Box>
     </Box>
