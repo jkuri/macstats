@@ -5,22 +5,24 @@
       "browse": {
         "path": [
           "${workspaceFolder}",
+          "${workspaceFolder}/smc",
           "${workspaceFolder}/node_modules/nan",
-          "/Users/jan/.nvm/versions/node/v14.4.0/include/node"
+          "/Users/jan/.nvm/versions/node/v24.11.0/include/node"
         ],
         "limitSymbolsToIncludedHeaders": true
       },
       "includePath": [
         "${workspaceFolder}",
+        "${workspaceFolder}/smc",
         "${workspaceFolder}/node_modules/nan",
-        "/Users/jan/.nvm/versions/node/v14.4.0/include/node"
+        "/Users/jan/.nvm/versions/node/v24.11.0/include/node"
       ],
       "defines": [],
       "macFrameworkPath": ["/System/Library/Frameworks", "/Library/Frameworks"],
       "compilerPath": "/usr/bin/clang",
-      "cStandard": "c11",
-      "cppStandard": "c++17",
-      "intelliSenseMode": "clang-x64"
+      "cStandard": "c17",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "clang-arm64"
     }
   ],
   "version": 4

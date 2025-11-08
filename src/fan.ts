@@ -1,13 +1,20 @@
-const smc = require('../build/Release/smc.node');
+import { createRequire } from 'node:module';
 
-export interface Fan {
-  [key: string]: number;
+const requireNative = createRequire(import.meta.url);
+const smc = requireNative('../build/Release/smc.node');
+
+export interface FanInfo {
+  rpm: number;
+  min: number;
+  max: number;
 }
 
-export function getFanData(): Promise<Fan> {
-  return new Promise((resolve, reject) => {
-    resolve(fanData());
-  });
+export interface Fan {
+  [key: string]: FanInfo;
+}
+
+export async function getFanData(): Promise<Fan> {
+  return fanData();
 }
 
 export function getFanDataSync(): Fan {
@@ -15,7 +22,11 @@ export function getFanDataSync(): Fan {
 }
 
 function fanData(): Fan {
-  return Array.from(Array(smc.fans()), (_, i) => smc.fanRpm(i)).reduce((prev, curr, i) => {
+  return Array.from(Array(smc.fans()), (_, i) => ({
+    rpm: smc.fanRpm(i),
+    min: smc.fanMin(i),
+    max: smc.fanMax(i)
+  })).reduce((prev, curr, i) => {
     prev[i] = curr;
     return prev;
   }, {} as Fan);

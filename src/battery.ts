@@ -1,4 +1,7 @@
-import { execSync, exec } from 'child_process';
+import { createRequire } from 'node:module';
+
+const requireNative = createRequire(import.meta.url);
+const smc = requireNative('../build/Release/smc.node');
 
 export interface Battery {
   external_connected: boolean;
@@ -16,98 +19,74 @@ export interface Battery {
   temperature: number;
   percentage: number;
   cycle_percentage: number;
+  amperage: number;
+  power: number;
+  charge_percent: number;
+  health_percent: number;
 }
 
-const cmd = `ioreg -rn AppleSmartBattery`;
-
 export async function getBatteryData(): Promise<Battery> {
-  const data = await readData();
-  return parseData(data);
+  return getBatteryDataSync();
 }
 
 export function getBatteryDataSync(): Battery {
-  return parseData(readDataSync());
+  const data = smc.getBatteryData();
+  return parseData(data);
 }
 
-async function readData(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    exec(cmd, { encoding: 'utf8' }, (err: Error, stdout: string, stderr: string) => {
-      if (err || stderr !== '') {
-        reject(err || stderr);
-      } else {
-        resolve(stdout.toString());
-      }
-    });
-  });
+interface RawBatteryData {
+  external_connected: boolean;
+  battery_installed: boolean;
+  is_charging: boolean;
+  fully_charged: boolean;
+  voltage: number;
+  cycle_count: number;
+  design_capacity: number;
+  max_capacity: number;
+  current_capacity: number;
+  design_cycle_count: number;
+  time_remaining: number;
+  temperature: number;
+  amperage: number;
+  charge_percent: number;
+  health_percent: number;
 }
 
-function readDataSync(): string {
-  return execSync(cmd, { encoding: 'utf8' }).toString();
-}
+function parseData(data: RawBatteryData): Battery {
+  // Calculate power (Watts) = Voltage (mV) * Amperage (mA) / 1,000,000
+  const power = data.voltage && data.amperage
+    ? Math.abs((data.voltage * data.amperage) / 1000000)
+    : 0;
 
-function parseData(data: string): Battery {
-  const stats: Battery = data.split('\n').reduce((prev, curr) => {
-    curr = curr.trim();
-
-    if (curr.includes('ExternalConnected')) {
-      prev.external_connected = curr.split('=')[1].trim() === 'Yes' ? true : false;
-    }
-
-    if (curr.includes('BatteryInstalled')) {
-      prev.battery_installed = curr.split('=')[1].trim() === 'Yes' ? true : false;
-    }
-
-    if (curr.includes('FullyCharged')) {
-      prev.fully_charged = curr.split('=')[1].trim() === 'Yes' ? true : false;
-    }
-
-    if (curr.includes('IsCharging')) {
-      prev.is_charging = curr.split('=')[1].trim() === 'Yes' ? true : false;
-    }
-
-    if (curr.includes('"Voltage"') && !curr.includes('LegacyBatteryInfo') && !curr.includes('BatteryData')) {
-      prev.voltage = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('"CycleCount"') && !curr.includes('BatteryData')) {
-      prev.cycle_count = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('DesignCapacity') && !curr.includes('BatteryData')) {
-      prev.design_capacity = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('MaxCapacity')) {
-      prev.max_capacity = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('CurrentCapacity')) {
-      prev.current_capacity = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('DesignCycleCount9C')) {
-      prev.design_cycle_count = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('TimeRemaining')) {
-      prev.time_remaining = Number(curr.split('=')[1].trim());
-    }
-
-    if (curr.includes('Temperature')) {
-      prev.temperature = Number(curr.split('=')[1].trim());
-    }
-
-    return prev;
-  }, {} as Battery);
-
-  return Object.assign({}, stats, {
-    percentage: Math.round(Number((stats.max_capacity / stats.design_capacity) * 100)),
-    cycle_percentage: Math.round(Number((stats.cycle_count / stats.design_cycle_count) * 100)),
-    temperature: Math.round(Number(stats.temperature / 100)),
-    time_remaining_formatted: secondsToHms(stats.time_remaining || 0)
-  });
+  return {
+    external_connected: data.external_connected,
+    battery_installed: data.battery_installed,
+    is_charging: data.is_charging,
+    fully_charged: data.fully_charged,
+    voltage: data.voltage,
+    cycle_count: data.cycle_count,
+    design_capacity: data.design_capacity,
+    max_capacity: data.max_capacity,
+    current_capacity: data.current_capacity,
+    design_cycle_count: data.design_cycle_count,
+    time_remaining: data.time_remaining,
+    temperature: Math.round(data.temperature / 100),
+    percentage: Math.round((data.max_capacity / data.design_capacity) * 100),
+    cycle_percentage: Math.round((data.cycle_count / data.design_cycle_count) * 100),
+    time_remaining_formatted: secondsToHms(data.time_remaining),
+    power: Math.round(power * 100) / 100,
+    amperage: data.amperage,
+    charge_percent: data.charge_percent,
+    health_percent: data.health_percent
+  };
 }
 
 function secondsToHms(s: number): string {
-  return s === 0 ? '/' : new Date(1000 * s).toISOString().substr(11, 8);
+  if (s === 0 || s === 65535) {
+    return 'Calculating...';
+  }
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const seconds = s % 60;
+  return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }

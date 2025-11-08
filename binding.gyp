@@ -5,7 +5,8 @@
             "sources": ["smc/smc.h", "smc/smc.cc"],
             "link_settings": {
                 "libraries": [
-                    "IOKit.framework"
+                    "IOKit.framework",
+                    "DiskArbitration.framework"
                 ]
             },
             "include_dirs": [

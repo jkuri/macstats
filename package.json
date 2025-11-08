@@ -2,6 +2,7 @@
   "name": "macstats",
   "version": "3.2.0",
   "description": "Mac OS X statistics",
+  "type": "module",
   "main": "./dist/index.js",
   "preferGlobal": true,
   "bin": {
@@ -12,7 +13,11 @@
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build",
     "postinstall": "npm run build",
-    "lint": "eslint 'src/**/*.{js,ts}' --quiet --fix"
+    "lint": "eslint 'src/**/*.{js,ts}' --quiet --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui"
   },
   "repository": {
     "type": "git",
@@ -36,21 +41,23 @@
   },
   "homepage": "https://github.com/jkuri/macstats",
   "dependencies": {
-    "@types/node": "^20.11.30",
-    "chalk": "^4.1.2",
-    "nan": "^2.19.0",
-    "node-gyp": "^10.0.1",
-    "typescript": "^5.4.3"
+    "@types/node": "^24.10.0",
+    "chalk": "^5.6.2",
+    "nan": "^2.23.1",
+    "node-gyp": "^11.5.0",
+    "typescript": "^5.9.3"
   },
   "os": [
     "darwin"
   ],
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.3.1",
-    "@typescript-eslint/parser": "^7.3.1",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.1.3",
-    "prettier": "^3.2.5"
+    "@typescript-eslint/eslint-plugin": "^8.46.3",
+    "@typescript-eslint/parser": "^8.46.3",
+    "@vitest/ui": "^4.0.8",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
+    "vitest": "^4.0.8"
   }
 }

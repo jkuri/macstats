@@ -5,4 +5,4 @@
 //  Author: Jan Kuri <jkuri88@gmail.com>
 //  Licence: MIT
 
-require('../dist/cli');
+import '../dist/cli.js';
