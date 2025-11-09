@@ -100,9 +100,15 @@ function parseRAMUsage(raw: RawRAMUsage): RAMUsage {
 }
 
 export async function getMemoryData(): Promise<Memory> {
-  return {
-    voltage: smc.memoryVoltage()
-  };
+  return new Promise((resolve, reject) => {
+    try {
+      resolve({
+        voltage: smc.memoryVoltage()
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getMemoryDataSync(): Memory {
@@ -112,8 +118,14 @@ export function getMemoryDataSync(): Memory {
 }
 
 export async function getRAMUsage(): Promise<RAMUsage> {
-  const raw: RawRAMUsage = smc.getRAMUsageData();
-  return parseRAMUsage(raw);
+  return new Promise((resolve, reject) => {
+    try {
+      const raw: RawRAMUsage = smc.getRAMUsageData();
+      resolve(parseRAMUsage(raw));
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getRAMUsageSync(): RAMUsage {

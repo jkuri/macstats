@@ -5,24 +5,27 @@ const smc = requireNative('../build/Release/smc.node');
 
 export interface GPU {
   temperature: number;
-  power: number;
   voltage: number;
   usage: number;
 }
 
 export async function getGpuData(): Promise<GPU> {
-  return {
-    temperature: Math.round(smc.gpuTemperature()),
-    power: smc.gpuPower(),
-    voltage: smc.gpuVoltage(),
-    usage: Math.round(smc.gpuUsage() * 100)
-  };
+  return new Promise((resolve, reject) => {
+    try {
+      resolve({
+        temperature: Math.round(smc.gpuTemperature()),
+        voltage: smc.gpuVoltage(),
+        usage: Math.round(smc.gpuUsage() * 100)
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getGpuDataSync(): GPU {
   return {
     temperature: smc.gpuTemperature(),
-    power: smc.gpuPower(),
     voltage: smc.gpuVoltage(),
     usage: Math.round(smc.gpuUsage() * 100)
   };

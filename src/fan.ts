@@ -14,7 +14,13 @@ export interface Fan {
 }
 
 export async function getFanData(): Promise<Fan> {
-  return fanData();
+  return new Promise((resolve, reject) => {
+    try {
+      resolve(fanData());
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getFanDataSync(): Fan {

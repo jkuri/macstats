@@ -6,7 +6,6 @@ const smc = requireNative('../build/Release/smc.node');
 export interface CPU {
   temperature: number;
   temperatureDie: number;
-  power: number;
   voltage: number;
 }
 
@@ -32,19 +31,23 @@ export interface CPUUsage {
 }
 
 export async function getCpuData(): Promise<CPU> {
-  return {
-    temperature: Math.round(smc.temperature()),
-    temperatureDie: Math.round(smc.cpuTemperatureDie()),
-    power: smc.cpuPower(),
-    voltage: smc.cpuVoltage()
-  };
+  return new Promise((resolve, reject) => {
+    try {
+      resolve({
+        temperature: Math.round(smc.temperature()),
+        temperatureDie: Math.round(smc.cpuTemperatureDie()),
+        voltage: smc.cpuVoltage()
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getCpuDataSync(): CPU {
   return {
     temperature: smc.temperature(),
     temperatureDie: smc.cpuTemperatureDie(),
-    power: smc.cpuPower(),
     voltage: smc.cpuVoltage()
   };
 }

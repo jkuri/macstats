@@ -23,7 +23,7 @@ const createProgressBar = (percentage: number, width: number = 20): string => {
 const RAMSectionComponent: React.FC<RAMSectionProps> = ({ ram, history, showHistory = true }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>🧠 RAM Usage</Text>
+      <Text bold>RAM Usage</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>

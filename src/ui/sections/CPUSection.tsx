@@ -28,7 +28,7 @@ const CPUSectionComponent: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>💻 CPU Usage</Text>
+      <Text bold>CPU Usage</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>
@@ -64,14 +64,6 @@ const CPUSectionComponent: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history
           {cpu.temperatureDie > 0 && cpu.temperatureDie !== cpu.temperature && (
             <Text dimColor> (Die: {cpu.temperatureDie}°C)</Text>
           )}
-        </Box>
-
-        <Box flexDirection="row">
-          <Box width={11}>
-            <Text dimColor>Power:</Text>
-          </Box>
-          <Text>{cpu.power.toFixed(2)}W</Text>
-          {cpu.voltage > 0 && <Text dimColor> ({cpu.voltage.toFixed(2)}V)</Text>}
         </Box>
 
         {showHistory && history.length > 0 && (

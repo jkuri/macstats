@@ -88,23 +88,22 @@ import {
 
 #### `getCpuData()` / `getCpuDataSync()`
 
-Get CPU temperature, die temperature, power consumption, and voltage.
+Get CPU temperature, die temperature, and voltage.
 
 **Returns:** `Promise<CPU>` / `CPU`
 
-| Property         | Type     | Description                    |
-| ---------------- | -------- | ------------------------------ |
-| `temperature`    | `number` | CPU temperature in °C          |
-| `temperatureDie` | `number` | CPU die temperature in °C      |
-| `power`          | `number` | CPU power consumption in Watts |
-| `voltage`        | `number` | CPU voltage in Volts           |
+| Property         | Type     | Description               |
+| ---------------- | -------- | ------------------------- |
+| `temperature`    | `number` | CPU temperature in °C     |
+| `temperatureDie` | `number` | CPU die temperature in °C |
+| `voltage`        | `number` | CPU voltage in Volts      |
 
 **Example:**
 
 ```typescript
 const cpu = await getCpuData();
 console.log(`CPU Temp: ${cpu.temperature}°C`);
-console.log(`CPU Power: ${cpu.power}W`);
+console.log(`CPU Die Temp: ${cpu.temperatureDie}°C`);
 ```
 
 #### `getCPUUsage()` / `getCPUUsageSync()`
@@ -136,22 +135,22 @@ console.log(`Load Average (1m): ${usage.loadAvg1}`);
 
 #### `getGpuData()` / `getGpuDataSync()`
 
-Get GPU temperature, power consumption, and voltage.
+Get GPU temperature, voltage, and usage.
 
 **Returns:** `Promise<GPU>` / `GPU`
 
-| Property      | Type     | Description                    |
-| ------------- | -------- | ------------------------------ |
-| `temperature` | `number` | GPU temperature in °C          |
-| `power`       | `number` | GPU power consumption in Watts |
-| `voltage`     | `number` | GPU voltage in Volts           |
+| Property      | Type     | Description                  |
+| ------------- | -------- | ---------------------------- |
+| `temperature` | `number` | GPU temperature in °C        |
+| `voltage`     | `number` | GPU voltage in Volts         |
+| `usage`       | `number` | GPU usage percentage (0-100) |
 
 **Example:**
 
 ```typescript
 const gpu = await getGpuData();
 console.log(`GPU Temp: ${gpu.temperature}°C`);
-console.log(`GPU Power: ${gpu.power}W`);
+console.log(`GPU Usage: ${gpu.usage}%`);
 ```
 
 ### Battery
@@ -312,15 +311,19 @@ Object.entries(fans).forEach(([index, fan]) => {
 
 #### `getPowerData()` / `getPowerDataSync()`
 
-Get power consumption for CPU, GPU, and system.
+Get comprehensive power consumption metrics for all system components.
 
 **Returns:** `Promise<Power>` / `Power`
 
-| Property | Type     | Description                       |
-| -------- | -------- | --------------------------------- |
-| `cpu`    | `number` | CPU power consumption in Watts    |
-| `gpu`    | `number` | GPU power consumption in Watts    |
-| `system` | `number` | System power consumption in Watts |
+| Property  | Type     | Description                               |
+| --------- | -------- | ----------------------------------------- |
+| `cpu`     | `number` | CPU power consumption in Watts            |
+| `gpu`     | `number` | GPU power consumption in Watts            |
+| `ane`     | `number` | ANE (Apple Neural Engine) power in Watts  |
+| `all`     | `number` | Combined power (cpu + gpu + ane) in Watts |
+| `system`  | `number` | Total system power consumption in Watts   |
+| `ram`     | `number` | RAM power consumption in Watts            |
+| `gpu_ram` | `number` | GPU RAM (SRAM) power consumption in Watts |
 
 **Example:**
 
@@ -328,7 +331,10 @@ Get power consumption for CPU, GPU, and system.
 const power = await getPowerData();
 console.log(`CPU Power: ${power.cpu}W`);
 console.log(`GPU Power: ${power.gpu}W`);
-console.log(`System Power: ${power.system}W`);
+console.log(`ANE Power: ${power.ane}W`);
+console.log(`RAM Power: ${power.ram}W`);
+console.log(`Combined (CPU+GPU+ANE): ${power.all}W`);
+console.log(`Total System Power: ${power.system}W`);
 ```
 
 ### Sensors
@@ -429,11 +435,19 @@ async function main() {
 
     console.log('\n=== CPU ===');
     console.log(`Temperature: ${cpu.temperature}°C`);
-    console.log(`Power: ${power.cpu}W`);
+    console.log(`Die Temperature: ${cpu.temperatureDie}°C`);
 
     console.log('\n=== GPU ===');
     console.log(`Temperature: ${gpu.temperature}°C`);
-    console.log(`Power: ${power.gpu}W`);
+    console.log(`Usage: ${gpu.usage}%`);
+
+    console.log('\n=== Power ===');
+    console.log(`CPU: ${power.cpu}W`);
+    console.log(`GPU: ${power.gpu}W`);
+    console.log(`ANE: ${power.ane}W`);
+    console.log(`RAM: ${power.ram}W`);
+    console.log(`Combined: ${power.all}W`);
+    console.log(`System Total: ${power.system}W`);
 
     console.log('\n=== Memory ===');
     console.log(`Usage: ${ram.usedGB}GB / ${ram.totalGB}GB (${ram.usagePercent}%)`);

@@ -24,7 +24,7 @@ const createProgressBar = (percentage: number, width: number = 15): string => {
 const GPUSectionComponent: React.FC<GPUSectionProps> = ({ gpu, history = [], showHistory = true }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>🎮 GPU</Text>
+      <Text bold>GPU</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>
@@ -39,14 +39,6 @@ const GPUSectionComponent: React.FC<GPUSectionProps> = ({ gpu, history = [], sho
             <Text dimColor>Temp:</Text>
           </Box>
           <Text>{gpu.temperature}°C</Text>
-        </Box>
-
-        <Box flexDirection="row">
-          <Box width={11}>
-            <Text dimColor>Power:</Text>
-          </Box>
-          <Text>{gpu.power.toFixed(2)}W</Text>
-          {gpu.voltage > 0 && <Text dimColor> ({gpu.voltage.toFixed(2)}V)</Text>}
         </Box>
 
         {showHistory && history.length > 0 && (

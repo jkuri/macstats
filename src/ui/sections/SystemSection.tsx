@@ -9,7 +9,7 @@ interface SystemSectionProps {
 const SystemSectionComponent: React.FC<SystemSectionProps> = ({ data }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>🖥️ System Information</Text>
+      <Text bold>System Information</Text>
       <Box marginTop={1} flexDirection="row" paddingLeft={2} flexWrap="wrap" gap={3}>
         <Box>
           <Text>

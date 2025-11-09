@@ -7,6 +7,7 @@ import { GPUSection } from './sections/GPUSection.js';
 import { BatterySection } from './sections/BatterySection.js';
 import { SensorsSection } from './sections/SensorsSection.js';
 import { DisksSection } from './sections/DisksSection.js';
+import { PowerSection } from './sections/PowerSection.js';
 import { getSystemData } from '../system.js';
 import { getCpuData, getCPUUsage } from '../cpu.js';
 import { getGpuData } from '../gpu.js';
@@ -15,6 +16,7 @@ import { getBatteryData } from '../battery.js';
 import { getFanData } from '../fan.js';
 import { getDiskInfo } from '../disk.js';
 import { getSensorData } from '../sensors.js';
+import { getPowerData } from '../power.js';
 
 interface DashboardData {
   system: Awaited<ReturnType<typeof getSystemData>>;
@@ -26,6 +28,7 @@ interface DashboardData {
   sensors: Awaited<ReturnType<typeof getSensorData>>;
   fans: Awaited<ReturnType<typeof getFanData>>;
   disks: Awaited<ReturnType<typeof getDiskInfo>>;
+  power: Awaited<ReturnType<typeof getPowerData>>;
 }
 
 interface CPUHistory {
@@ -76,7 +79,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const fetchData = async () => {
     try {
-      const [system, cpu, cpuUsage, gpu, ram, battery, sensors, fans, disks] = await Promise.all([
+      const [system, cpu, cpuUsage, gpu, ram, battery, sensors, fans, disks, power] = await Promise.all([
         getSystemData(),
         getCpuData(),
         getCPUUsage(),
@@ -85,7 +88,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         getBatteryData().catch(() => null),
         getSensorData(),
         getFanData(),
-        getDiskInfo()
+        getDiskInfo(),
+        getPowerData()
       ]);
 
       setData({
@@ -97,7 +101,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         battery,
         sensors,
         fans,
-        disks
+        disks,
+        power
       });
 
       // Update CPU history (keep last 60 data points)
@@ -186,13 +191,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </Box>
       </Box>
 
-      {/* Battery and Sensors - Side by side */}
+      {/* Battery, Sensors, and Power - Three columns */}
       <Box flexDirection="row" flexWrap="wrap">
-        <Box width="50%" paddingRight={1} flexDirection="column">
+        <Box width="33%" paddingRight={1} flexDirection="column">
           {data.battery && <BatterySection battery={data.battery} />}
         </Box>
-        <Box width="50%" paddingLeft={1} flexDirection="column">
+        <Box width="33%" paddingRight={1} paddingLeft={1} flexDirection="column">
           <SensorsSection sensors={data.sensors} fans={data.fans} />
+        </Box>
+        <Box width="34%" paddingLeft={1} flexDirection="column">
+          <PowerSection power={data.power} />
         </Box>
       </Box>
 

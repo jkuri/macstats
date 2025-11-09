@@ -682,8 +682,8 @@ double SMCGetPower(const char *key) {
   if (result == kIOReturnSuccess) {
     if (val.dataSize > 0) {
       if (strcmp(val.dataType, DATATYPE_FPE2) == 0) {
-        int intValue = _strtof(val.bytes, val.dataSize, 2);
-        return intValue;
+        float floatValue = _strtof(val.bytes, val.dataSize, 2);
+        return (double)floatValue;
       }
     }
   }
@@ -1053,6 +1053,15 @@ inline bool MatchesChannelPattern(const char* name, const char* pattern) {
   } else if (strstr(pattern, "GPU") != NULL) {
     // Match exactly "GPU Energy"
     return (strcmp(name, "GPU Energy") == 0);
+  } else if (strstr(pattern, "Package") != NULL) {
+    // Match "Package" channel for total system power
+    return (strcmp(name, "Package") == 0);
+  } else if (strstr(pattern, "All") != NULL) {
+    // Match "All" channel
+    return (strcmp(name, "All") == 0);
+  } else if (strstr(pattern, "Whole") != NULL) {
+    // Match "Whole" channel
+    return (strcmp(name, "Whole") == 0);
   }
 
   return false;
@@ -1082,7 +1091,7 @@ double GetIOReportPower(const char* group, const char* subgroup, const char* cha
   }
 
   // Take multiple samples and average (like macmon does - improves accuracy)
-  const int numSamples = 1; // Single sample is fast enough for real-time monitoring
+  const int numSamples = 4; // 4 samples for better accuracy (matches macmon approach)
   const int sampleIntervalMs = 100; // 100ms sample interval
   double totalPower = 0.0;
 
@@ -1152,47 +1161,188 @@ double GetIOReportPower(const char* group, const char* subgroup, const char* cha
   return totalPower / numSamples;
 }
 
-void CpuPower(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
 
-  // Use IOReport (Apple Silicon) or SMC fallback (Intel)
-  double power = GetIOReportPower("Energy Model", NULL, "CPU Energy");
 
-  if (power == 0.0) {
-    // Fallback to SMC for Intel Macs
-    SMCOpen();
-    power = SMCGetPower("PCTR");
-    SMCClose();
+// Helper function to read all power metrics from IOReport
+// Returns: {cpu, gpu, ane, ram, gpu_ram, total}
+PowerMetrics GetAllPowerMetrics() {
+  PowerMetrics metrics = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  // Initialize cache if needed
+  if (!energyModelCache) {
+    energyModelCache = new IOReportCache();
+    CFStringRef groupRef = CFStringCreateWithCString(kCFAllocatorDefault, "Energy Model", kCFStringEncodingUTF8);
+    CFDictionaryRef channels = IOReportCopyChannelsInGroup(groupRef, NULL, 0, 0, 0);
+    CFRelease(groupRef);
+
+    if (channels) {
+      CFMutableDictionaryRef channelsMut = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, channels);
+      energyModelCache->subscription = IOReportCreateSubscription(NULL, channelsMut, &energyModelCache->subbedChannels, 0, NULL);
+      CFRelease(channels);
+      CFRelease(channelsMut);
+    }
   }
 
-  args.GetReturnValue().Set(Number::New(isolate, power));
-}
-
-void GpuPower(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  // Use IOReport (Apple Silicon) or SMC fallback (Intel)
-  double power = GetIOReportPower("Energy Model", NULL, "GPU Energy");
-
-  if (power == 0.0) {
-    // Fallback to SMC for Intel Macs
-    SMCOpen();
-    power = SMCGetPower("PGTR");
-    SMCClose();
+  if (!energyModelCache || !energyModelCache->subscription) {
+    return metrics;
   }
 
-  args.GetReturnValue().Set(Number::New(isolate, power));
+  // Take multiple samples and average (like macmon does)
+  const int numSamples = 4;
+  const int sampleIntervalMs = 100;
+  PowerMetrics totalMetrics = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+  for (int sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
+    CFDictionaryRef sample1 = IOReportCreateSamples(energyModelCache->subscription, energyModelCache->subbedChannels, NULL);
+    if (!sample1) continue;
+
+    usleep(sampleIntervalMs * 1000);
+
+    CFDictionaryRef sample2 = IOReportCreateSamples(energyModelCache->subscription, energyModelCache->subbedChannels, NULL);
+    if (!sample2) {
+      CFRelease(sample1);
+      continue;
+    }
+
+    CFDictionaryRef delta = IOReportCreateSamplesDelta(sample1, sample2, NULL);
+    CFRelease(sample1);
+    CFRelease(sample2);
+
+    if (!delta) continue;
+
+    CFArrayRef channels_array = (CFArrayRef)CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
+
+    if (channels_array && CFGetTypeID(channels_array) == CFArrayGetTypeID()) {
+      CFIndex count = CFArrayGetCount(channels_array);
+
+      for (CFIndex i = 0; i < count; i++) {
+        CFDictionaryRef channel = (CFDictionaryRef)CFArrayGetValueAtIndex(channels_array, i);
+        if (!channel) continue;
+
+        CFStringRef channelName = IOReportChannelGetChannelName(channel);
+        if (!channelName) continue;
+
+        char name[256] = {0};
+        CFStringGetCString(channelName, name, sizeof(name), kCFStringEncodingUTF8);
+
+        CFStringRef unit = IOReportChannelGetUnitLabel(channel);
+        if (!unit) continue;
+
+        char unitStr[32];
+        CFStringGetCString(unit, unitStr, sizeof(unitStr), kCFStringEncodingUTF8);
+
+        int64_t value = IOReportSimpleGetIntegerValue(channel, 0);
+        double power = ConvertEnergyToWatts(value, unitStr, sampleIntervalMs / 1000.0);
+
+        // Skip detailed channels and SRAM channels (they're sub-components)
+        bool isDetailedChannel = (strstr(name, "DTL") != NULL);
+        bool isSramChannel = (strstr(name, "SRAM") != NULL);
+        bool isIndividualCore = (strncmp(name, "ECPU", 4) == 0 || strncmp(name, "PCPU", 4) == 0) &&
+                               (strlen(name) <= 5);  // ECPU0-5, PCPU0-5
+
+        // Match macmon's logic exactly
+        if (strcmp(name, "GPU Energy") == 0) {
+          totalMetrics.gpu += power;
+          if (!isDetailedChannel && !isSramChannel) {
+            totalMetrics.total += power;
+          }
+        } else if (strstr(name, "CPU Energy") != NULL &&
+                   (strcmp(name + strlen(name) - 10, "CPU Energy") == 0)) {
+          // ends_with "CPU Energy": "CPU Energy" for Basic/Max, "DIE_0_CPU Energy" for Ultra
+          totalMetrics.cpu += power;
+          if (!isDetailedChannel && !isSramChannel) {
+            totalMetrics.total += power;
+          }
+        } else if (strncmp(name, "ANE", 3) == 0) {
+          // ANE, ANE0, ANE0_{} patterns - starts with "ANE"
+          totalMetrics.ane += power;
+          if (!isDetailedChannel && !isSramChannel) {
+            totalMetrics.total += power;
+          }
+        } else if (strncmp(name, "DRAM", 4) == 0) {
+          // Starts with "DRAM"
+          totalMetrics.ram += power;
+          if (!isDetailedChannel && !isSramChannel) {
+            totalMetrics.total += power;
+          }
+        } else if (strncmp(name, "GPU SRAM", 8) == 0) {
+          // Starts with "GPU SRAM"
+          totalMetrics.gpu_ram += power;
+          if (!isDetailedChannel && !isSramChannel) {
+            totalMetrics.total += power;
+          }
+        } else if (!isDetailedChannel && !isSramChannel && !isIndividualCore) {
+          // Add all other non-detailed, non-SRAM channels to total
+          // This includes: AMCC, DCS, DISP, DISPEXT, ISP, AVE, MSR, GPU, PCIe, etc.
+          totalMetrics.total += power;
+        }
+      }
+    }
+
+    CFRelease(delta);
+  }
+
+  // Average across samples
+  metrics.cpu = totalMetrics.cpu / numSamples;
+  metrics.gpu = totalMetrics.gpu / numSamples;
+  metrics.ane = totalMetrics.ane / numSamples;
+  metrics.ram = totalMetrics.ram / numSamples;
+  metrics.gpu_ram = totalMetrics.gpu_ram / numSamples;
+  metrics.total = totalMetrics.total / numSamples;
+
+  return metrics;
 }
 
-void SystemPower(const FunctionCallbackInfo<Value> &args) {
+// Get all power metrics in a single call (more efficient and consistent)
+void GetAllPower(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
+
+  // Get all IOReport power metrics in one call
+  PowerMetrics metrics = GetAllPowerMetrics();
+
+  // Get system power from SMC
   SMCOpen();
-  double power = SMCGetPower("PSTR");
+  SMCVal_t val;
+  kern_return_t result = SMCReadKey((char *)"PSTR", &val);
+  double systemPower = 0.0;
+  if (result == kIOReturnSuccess && val.dataSize == 4) {
+    float floatValue;
+    memcpy(&floatValue, val.bytes, sizeof(float));
+    systemPower = (double)floatValue;
+  }
   SMCClose();
-  args.GetReturnValue().Set(Number::New(isolate, power));
+
+  // Calculate all_power (like macmon does)
+  double allPower = metrics.cpu + metrics.gpu + metrics.ane;
+
+  // Create JavaScript object with all power values
+  Local<Object> obj = Object::New(isolate);
+  Local<v8::Context> context = isolate->GetCurrentContext();
+
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "cpu").ToLocalChecked(),
+           Number::New(isolate, metrics.cpu)).Check();
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "gpu").ToLocalChecked(),
+           Number::New(isolate, metrics.gpu)).Check();
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "ane").ToLocalChecked(),
+           Number::New(isolate, metrics.ane)).Check();
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "all").ToLocalChecked(),
+           Number::New(isolate, allPower)).Check();
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "system").ToLocalChecked(),
+           Number::New(isolate, systemPower)).Check();
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "ram").ToLocalChecked(),
+           Number::New(isolate, metrics.ram)).Check();
+  obj->Set(context,
+           String::NewFromUtf8(isolate, "gpu_ram").ToLocalChecked(),
+           Number::New(isolate, metrics.gpu_ram)).Check();
+
+  args.GetReturnValue().Set(obj);
 }
 
 void CpuVoltage(const FunctionCallbackInfo<Value> &args) {
@@ -1983,9 +2133,7 @@ void Init(v8::Local<Object> exports, v8::Local<v8::Value> module, void* priv) {
   NODE_SET_METHOD(exports, "fanRpm", FanRpm);
   NODE_SET_METHOD(exports, "fanMin", FanMin);
   NODE_SET_METHOD(exports, "fanMax", FanMax);
-  NODE_SET_METHOD(exports, "cpuPower", CpuPower);
-  NODE_SET_METHOD(exports, "gpuPower", GpuPower);
-  NODE_SET_METHOD(exports, "systemPower", SystemPower);
+  NODE_SET_METHOD(exports, "getAllPower", GetAllPower);
   NODE_SET_METHOD(exports, "cpuVoltage", CpuVoltage);
   NODE_SET_METHOD(exports, "gpuVoltage", GpuVoltage);
   NODE_SET_METHOD(exports, "memoryVoltage", MemoryVoltage);

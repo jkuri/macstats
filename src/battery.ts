@@ -26,7 +26,13 @@ export interface Battery {
 }
 
 export async function getBatteryData(): Promise<Battery> {
-  return getBatteryDataSync();
+  return new Promise((resolve, reject) => {
+    try {
+      resolve(getBatteryDataSync());
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getBatteryDataSync(): Battery {

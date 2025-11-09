@@ -211,3 +211,13 @@ typedef struct {
   DiskInfo* disks;           // Array of disks
   int count;                 // Number of disks
 } DiskList;
+
+// Power metrics structure
+typedef struct {
+  double cpu;                // CPU power in Watts
+  double gpu;                // GPU power in Watts
+  double ane;                // ANE (Apple Neural Engine) power in Watts
+  double ram;                // RAM power in Watts
+  double gpu_ram;            // GPU RAM power in Watts
+  double total;              // Total measured power (cpu + gpu + ane + ram + gpu_ram)
+} PowerMetrics;

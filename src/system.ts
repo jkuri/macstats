@@ -59,8 +59,14 @@ function parseData(raw: RawSystemData): SystemInfo {
 }
 
 export async function getSystemData(): Promise<SystemInfo> {
-  const raw: RawSystemData = smc.getSystemData();
-  return parseData(raw);
+  return new Promise((resolve, reject) => {
+    try {
+      const raw: RawSystemData = smc.getSystemData();
+      resolve(parseData(raw));
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getSystemDataSync(): SystemInfo {

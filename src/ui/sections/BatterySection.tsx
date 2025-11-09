@@ -37,7 +37,7 @@ const BatterySectionComponent: React.FC<BatterySectionProps> = ({ battery }) => 
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>{icon} Battery</Text>
+      <Text bold>Battery</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>

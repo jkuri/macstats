@@ -15,11 +15,17 @@ export interface SensorData {
 }
 
 export async function getSensorData(): Promise<SensorData> {
-  return {
-    temperatures: smc.getAllTemperatureSensors() as Sensor[],
-    voltages: smc.getAllVoltageSensors() as Sensor[],
-    currents: smc.getAllCurrentSensors() as Sensor[]
-  };
+  return new Promise((resolve, reject) => {
+    try {
+      resolve({
+        temperatures: smc.getAllTemperatureSensors() as Sensor[],
+        voltages: smc.getAllVoltageSensors() as Sensor[],
+        currents: smc.getAllCurrentSensors() as Sensor[]
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 export function getSensorDataSync(): SensorData {

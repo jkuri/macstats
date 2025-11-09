@@ -70,7 +70,7 @@ const SensorsSectionComponent: React.FC<SensorsSectionProps> = ({ sensors, fans 
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>🌡️ Sensors & Temperatures</Text>
+      <Text bold>Sensors & Temperatures</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         {/* Temperature sensor groups with min/max/avg */}
         {sortedCategories.map((category, idx) => {
@@ -91,35 +91,27 @@ const SensorsSectionComponent: React.FC<SensorsSectionProps> = ({ sensors, fans 
           );
         })}
 
-        {/* Fans */}
+        {/* Fans - only show if RPM > 0 */}
         {Object.keys(fans).length > 0 && (
           <>
-            {Object.entries(fans).map(([index, fan]) => (
-              <Box key={index} flexDirection="row">
-                <Box width={11}>
-                  <Text dimColor>Fan #{index}:</Text>
+            {Object.entries(fans)
+              .filter(([_, fan]) => fan.rpm > 0)
+              .map(([index, fan]) => (
+                <Box key={index} flexDirection="row">
+                  <Box width={11}>
+                    <Text dimColor>Fan #{index}:</Text>
+                  </Box>
+                  <Text>{fan.rpm} RPM</Text>
+                  {fan.min > 0 && fan.max > 0 && (
+                    <Text dimColor>
+                      {' '}
+                      ({fan.min}-{fan.max})
+                    </Text>
+                  )}
                 </Box>
-                <Text>{fan.rpm} RPM</Text>
-                {fan.min > 0 && fan.max > 0 && (
-                  <Text dimColor>
-                    {' '}
-                    ({fan.min}-{fan.max})
-                  </Text>
-                )}
-              </Box>
-            ))}
+              ))}
           </>
         )}
-
-        {/* Show total sensor count */}
-        <Box flexDirection="row">
-          <Box width={11}>
-            <Text dimColor>Sensors:</Text>
-          </Box>
-          <Text>
-            {sensors.temperatures.length} temp, {sensors.voltages.length} volt, {sensors.currents.length} curr
-          </Text>
-        </Box>
       </Box>
     </Box>
   );

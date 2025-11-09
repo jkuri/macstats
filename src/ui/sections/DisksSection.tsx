@@ -44,7 +44,7 @@ const DisksSectionComponent: React.FC<DisksSectionProps> = ({ disks, detailedMod
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
-      <Text bold>💾 Disks</Text>
+      <Text bold>Disks</Text>
       <Box marginTop={1} flexDirection="column" paddingLeft={2}>
         {mainDisks.map((disk, index) => {
           const usedSize = formatBytes(disk.usedSize);

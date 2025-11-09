@@ -1,7 +1,4 @@
-/**
- * Tests for battery module
- */
-
+import { describe, test, expect } from 'vitest';
 import { getBatteryData } from '../src/battery';
 
 describe('Battery Module', () => {
