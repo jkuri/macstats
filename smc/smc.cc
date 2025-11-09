@@ -527,16 +527,16 @@ int SMCGetFanNumber() {
   return 0;
 }
 
-int SMCGetFanRPM(int fan_number) {
+// Helper function to read fan values (RPM, Min, Max)
+int SMCGetFanValue(int fan_number, const char* key_format) {
   SMCVal_t val;
   kern_return_t result;
   UInt32Char_t key;
 
-  snprintf(key, sizeof(key), SMC_PKEY_FAN_RPM, fan_number);
+  snprintf(key, sizeof(key), key_format, fan_number);
 
   result = SMCReadKey(key, &val);
   if (result == kIOReturnSuccess) {
-    // read succeeded - check returned value
     if (val.dataSize > 0) {
       if (strcmp(val.dataType, DATATYPE_FPE2) == 0) {
         int intValue = _strtof(val.bytes, val.dataSize, 2);
@@ -544,46 +544,19 @@ int SMCGetFanRPM(int fan_number) {
       }
     }
   }
-  // read failed
   return 0;
+}
+
+int SMCGetFanRPM(int fan_number) {
+  return SMCGetFanValue(fan_number, SMC_PKEY_FAN_RPM);
 }
 
 int SMCGetFanMin(int fan_number) {
-  SMCVal_t val;
-  kern_return_t result;
-  UInt32Char_t key;
-
-  snprintf(key, sizeof(key), SMC_PKEY_FAN_MIN, fan_number);
-
-  result = SMCReadKey(key, &val);
-  if (result == kIOReturnSuccess) {
-    if (val.dataSize > 0) {
-      if (strcmp(val.dataType, DATATYPE_FPE2) == 0) {
-        int intValue = _strtof(val.bytes, val.dataSize, 2);
-        return intValue;
-      }
-    }
-  }
-  return 0;
+  return SMCGetFanValue(fan_number, SMC_PKEY_FAN_MIN);
 }
 
 int SMCGetFanMax(int fan_number) {
-  SMCVal_t val;
-  kern_return_t result;
-  UInt32Char_t key;
-
-  snprintf(key, sizeof(key), SMC_PKEY_FAN_MAX, fan_number);
-
-  result = SMCReadKey(key, &val);
-  if (result == kIOReturnSuccess) {
-    if (val.dataSize > 0) {
-      if (strcmp(val.dataType, DATATYPE_FPE2) == 0) {
-        int intValue = _strtof(val.bytes, val.dataSize, 2);
-        return intValue;
-      }
-    }
-  }
-  return 0;
+  return SMCGetFanValue(fan_number, SMC_PKEY_FAN_MAX);
 }
 
 void Temperature(const FunctionCallbackInfo<Value> &args) {
@@ -604,71 +577,41 @@ void Fans(const FunctionCallbackInfo<Value> &args) {
   args.GetReturnValue().Set(Number::New(isolate, numberOfFans));
 }
 
-void FanRpm(const FunctionCallbackInfo<Value> &args) {
+// Helper function for fan callbacks
+typedef int (*FanGetterFunc)(int);
+
+void FanCallback(const FunctionCallbackInfo<Value> &args, FanGetterFunc getter) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
+
   if (args.Length() < 1) {
-    // Fan number (id) isn't specified
     args.GetReturnValue().Set(Undefined(isolate));
     return;
   }
+
   if (!args[0]->IsNumber()) {
-    size_t size = 100;
-    char *CharBuff = new char[size + 1];
-    v8::MaybeLocal<v8::String> result = v8::String::NewFromUtf8(
-        isolate, CharBuff, v8::NewStringType::kNormal, static_cast<int>(size));
-    isolate->ThrowException(Exception::TypeError(result.ToLocalChecked()));
+    isolate->ThrowException(Exception::TypeError(
+        String::NewFromUtf8(isolate, "Fan number must be a number").ToLocalChecked()));
     return;
   }
+
   int fanNumber = args[0]->Int32Value(Nan::GetCurrentContext()).ToChecked();
   SMCOpen();
-  int rpm = SMCGetFanRPM(fanNumber);
+  int value = getter(fanNumber);
   SMCClose();
-  args.GetReturnValue().Set(Number::New(isolate, rpm));
+  args.GetReturnValue().Set(Number::New(isolate, value));
+}
+
+void FanRpm(const FunctionCallbackInfo<Value> &args) {
+  FanCallback(args, SMCGetFanRPM);
 }
 
 void FanMin(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  if (args.Length() < 1) {
-    args.GetReturnValue().Set(Undefined(isolate));
-    return;
-  }
-  if (!args[0]->IsNumber()) {
-    size_t size = 100;
-    char *CharBuff = new char[size + 1];
-    v8::MaybeLocal<v8::String> result = v8::String::NewFromUtf8(
-        isolate, CharBuff, v8::NewStringType::kNormal, static_cast<int>(size));
-    isolate->ThrowException(Exception::TypeError(result.ToLocalChecked()));
-    return;
-  }
-  int fanNumber = args[0]->Int32Value(Nan::GetCurrentContext()).ToChecked();
-  SMCOpen();
-  int min = SMCGetFanMin(fanNumber);
-  SMCClose();
-  args.GetReturnValue().Set(Number::New(isolate, min));
+  FanCallback(args, SMCGetFanMin);
 }
 
 void FanMax(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-  if (args.Length() < 1) {
-    args.GetReturnValue().Set(Undefined(isolate));
-    return;
-  }
-  if (!args[0]->IsNumber()) {
-    size_t size = 100;
-    char *CharBuff = new char[size + 1];
-    v8::MaybeLocal<v8::String> result = v8::String::NewFromUtf8(
-        isolate, CharBuff, v8::NewStringType::kNormal, static_cast<int>(size));
-    isolate->ThrowException(Exception::TypeError(result.ToLocalChecked()));
-    return;
-  }
-  int fanNumber = args[0]->Int32Value(Nan::GetCurrentContext()).ToChecked();
-  SMCOpen();
-  int max = SMCGetFanMax(fanNumber);
-  SMCClose();
-  args.GetReturnValue().Set(Number::New(isolate, max));
+  FanCallback(args, SMCGetFanMax);
 }
 
 void CpuTemperatureDie(const FunctionCallbackInfo<Value> &args) {
@@ -798,11 +741,14 @@ void GetModelInfo(const FunctionCallbackInfo<Value> &args) {
   args.GetReturnValue().Set(String::NewFromUtf8(isolate, model_name).ToLocalChecked());
 }
 
-void GetAllTemperatureSensors(const FunctionCallbackInfo<Value> &args) {
+// Helper function for sensor callbacks
+typedef IOKitSensorList (*SensorGetterFunc)();
+
+void SensorCallback(const FunctionCallbackInfo<Value> &args, SensorGetterFunc getter) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
 
-  IOKitSensorList sensors = GetIOKitTemperatureSensors();
+  IOKitSensorList sensors = getter();
   Local<Array> result = Array::New(isolate, sensors.count);
 
   for (int i = 0; i < sensors.count; i++) {
@@ -818,50 +764,18 @@ void GetAllTemperatureSensors(const FunctionCallbackInfo<Value> &args) {
 
   FreeIOKitSensorList(sensors);
   args.GetReturnValue().Set(result);
+}
+
+void GetAllTemperatureSensors(const FunctionCallbackInfo<Value> &args) {
+  SensorCallback(args, GetIOKitTemperatureSensors);
 }
 
 void GetAllVoltageSensors(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  IOKitSensorList sensors = GetIOKitVoltageSensors();
-  Local<Array> result = Array::New(isolate, sensors.count);
-
-  for (int i = 0; i < sensors.count; i++) {
-    Local<Object> sensor = Object::New(isolate);
-    sensor->Set(isolate->GetCurrentContext(),
-                String::NewFromUtf8(isolate, "name").ToLocalChecked(),
-                String::NewFromUtf8(isolate, sensors.sensors[i].name).ToLocalChecked()).Check();
-    sensor->Set(isolate->GetCurrentContext(),
-                String::NewFromUtf8(isolate, "value").ToLocalChecked(),
-                Number::New(isolate, sensors.sensors[i].value)).Check();
-    result->Set(isolate->GetCurrentContext(), i, sensor).Check();
-  }
-
-  FreeIOKitSensorList(sensors);
-  args.GetReturnValue().Set(result);
+  SensorCallback(args, GetIOKitVoltageSensors);
 }
 
 void GetAllCurrentSensors(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  IOKitSensorList sensors = GetIOKitCurrentSensors();
-  Local<Array> result = Array::New(isolate, sensors.count);
-
-  for (int i = 0; i < sensors.count; i++) {
-    Local<Object> sensor = Object::New(isolate);
-    sensor->Set(isolate->GetCurrentContext(),
-                String::NewFromUtf8(isolate, "name").ToLocalChecked(),
-                String::NewFromUtf8(isolate, sensors.sensors[i].name).ToLocalChecked()).Check();
-    sensor->Set(isolate->GetCurrentContext(),
-                String::NewFromUtf8(isolate, "value").ToLocalChecked(),
-                Number::New(isolate, sensors.sensors[i].value)).Check();
-    result->Set(isolate->GetCurrentContext(), i, sensor).Check();
-  }
-
-  FreeIOKitSensorList(sensors);
-  args.GetReturnValue().Set(result);
+  SensorCallback(args, GetIOKitCurrentSensors);
 }
 
 // Helper function to get integer value from CFDictionary
@@ -1325,6 +1239,13 @@ void GetBatteryData(const FunctionCallbackInfo<Value> &args) {
   args.GetReturnValue().Set(result);
 }
 
+// Static variables to track previous CPU ticks for delta calculation
+static unsigned long long prev_user_ticks = 0;
+static unsigned long long prev_system_ticks = 0;
+static unsigned long long prev_idle_ticks = 0;
+static unsigned long long prev_nice_ticks = 0;
+static bool first_call = true;
+
 // Get CPU usage information
 CPUUsage GetCPUUsage() {
   CPUUsage usage = {};
@@ -1342,16 +1263,49 @@ CPUUsage GetCPUUsage() {
   mach_msg_type_number_t count = HOST_CPU_LOAD_INFO_COUNT;
 
   if (host_statistics(mach_host_self(), HOST_CPU_LOAD_INFO, (host_info_t)&cpuinfo, &count) == KERN_SUCCESS) {
-    unsigned long long totalTicks = 0;
-    for (int i = 0; i < CPU_STATE_MAX; i++) {
-      totalTicks += cpuinfo.cpu_ticks[i];
-    }
+    unsigned long long user_ticks = cpuinfo.cpu_ticks[CPU_STATE_USER];
+    unsigned long long system_ticks = cpuinfo.cpu_ticks[CPU_STATE_SYSTEM];
+    unsigned long long idle_ticks = cpuinfo.cpu_ticks[CPU_STATE_IDLE];
+    unsigned long long nice_ticks = cpuinfo.cpu_ticks[CPU_STATE_NICE];
 
-    if (totalTicks > 0) {
-      usage.user_load = (double)cpuinfo.cpu_ticks[CPU_STATE_USER] / (double)totalTicks;
-      usage.system_load = (double)cpuinfo.cpu_ticks[CPU_STATE_SYSTEM] / (double)totalTicks;
-      usage.idle_load = (double)cpuinfo.cpu_ticks[CPU_STATE_IDLE] / (double)totalTicks;
-      usage.total_usage = 1.0 - usage.idle_load;
+    // On first call, just store the values and return zeros
+    if (first_call) {
+      prev_user_ticks = user_ticks;
+      prev_system_ticks = system_ticks;
+      prev_idle_ticks = idle_ticks;
+      prev_nice_ticks = nice_ticks;
+      first_call = false;
+      usage.user_load = 0.0;
+      usage.system_load = 0.0;
+      usage.idle_load = 1.0;
+      usage.total_usage = 0.0;
+    } else {
+      // Calculate deltas
+      unsigned long long delta_user = user_ticks - prev_user_ticks;
+      unsigned long long delta_system = system_ticks - prev_system_ticks;
+      unsigned long long delta_idle = idle_ticks - prev_idle_ticks;
+      unsigned long long delta_nice = nice_ticks - prev_nice_ticks;
+
+      unsigned long long total_delta = delta_user + delta_system + delta_idle + delta_nice;
+
+      if (total_delta > 0) {
+        usage.user_load = (double)delta_user / (double)total_delta;
+        usage.system_load = (double)delta_system / (double)total_delta;
+        usage.idle_load = (double)delta_idle / (double)total_delta;
+        usage.total_usage = 1.0 - usage.idle_load;
+      } else {
+        // No change in ticks, maintain previous state
+        usage.user_load = 0.0;
+        usage.system_load = 0.0;
+        usage.idle_load = 1.0;
+        usage.total_usage = 0.0;
+      }
+
+      // Update previous values for next call
+      prev_user_ticks = user_ticks;
+      prev_system_ticks = system_ticks;
+      prev_idle_ticks = idle_ticks;
+      prev_nice_ticks = nice_ticks;
     }
   }
 

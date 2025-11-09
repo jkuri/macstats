@@ -66,10 +66,10 @@ function valuesToSymbols(data: number[], targetWidth: number): string {
   // Block characters from empty to full (9 levels)
   const blocks = ['░', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
-  // Take last 'targetWidth' data points and reverse so oldest is on left
-  const recentData = data.slice(-targetWidth).reverse();
+  // Take last 'targetWidth' data points (oldest to newest)
+  const recentData = data.slice(-targetWidth);
 
-  // Pad with empty blocks if not enough data (on the right for future data)
+  // Pad with empty blocks if not enough data (on the left for past data)
   const padding = targetWidth - recentData.length;
   const paddingStr = padding > 0 ? '░'.repeat(padding) : '';
 
@@ -86,5 +86,5 @@ function valuesToSymbols(data: number[], targetWidth: number): string {
     })
     .join('');
 
-  return symbols + paddingStr;
+  return paddingStr + symbols;
 }
