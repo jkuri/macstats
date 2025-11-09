@@ -19,25 +19,7 @@ Node module for macOS system statistics. Get real-time CPU, GPU, battery, memory
 
 ## Example output
 
-```shell
---- CPU Stats ---
-CPU Temp:        33.75°C
-
---- Fans Stats ---
-Fan 0 speed:     1996 RPM
-Fan 1 speed:     2003 RPM
-
---- Battery Stats ---
-Charged:         82%
-Capacity:        92%
-Cycle Count:     692 (69%)
-Max Cycle Count: 1000
-Current Charge:  5189 mAh
-Maximum Charge:  6316 mAh
-Design Capacity: 6900 mAh
-Time Remaining:  6.54 h
-Temperature:     30.06°C
-```
+<img width="1738" height="1134" alt="Screenshot 2025-11-09 at 01 23 33" src="https://github.com/user-attachments/assets/93154027-646a-426f-9dcc-bfa93753ff6d" />
 
 ## Installation
 
