@@ -51,10 +51,8 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
   const icon = getBatteryIcon(battery.charge_percent, isCharging);
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="green" paddingX={1}>
-      <Text bold color="green">
-        {icon} Battery
-      </Text>
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
+      <Text bold>{icon} Battery</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>

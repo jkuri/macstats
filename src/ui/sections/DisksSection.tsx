@@ -49,10 +49,8 @@ export const DisksSection: React.FC<DisksSectionProps> = ({ disks, detailedMode 
   const mainDisks = displayDisks;
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="blue" paddingX={1}>
-      <Text bold color="blue">
-        💾 Disks
-      </Text>
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
+      <Text bold>💾 Disks</Text>
       <Box marginTop={1} flexDirection="column" paddingLeft={2}>
         {mainDisks.map((disk, index) => {
           const usageColor = getUsageColor(disk.usagePercent);

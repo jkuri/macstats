@@ -37,10 +37,8 @@ export const RAMSection: React.FC<RAMSectionProps> = ({ ram, history, showHistor
   const pressureColor = getPressureColor(ram.pressureStatus);
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="magenta" paddingX={1}>
-      <Text bold color="magenta">
-        🧠 RAM Usage
-      </Text>
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
+      <Text bold>🧠 RAM Usage</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>

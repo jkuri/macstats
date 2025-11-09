@@ -75,10 +75,8 @@ export const SensorsSection: React.FC<SensorsSectionProps> = ({ sensors, fans })
     });
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="yellow" paddingX={1}>
-      <Text bold color="yellow">
-        🌡️ Sensors & Temperatures
-      </Text>
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
+      <Text bold>🌡️ Sensors & Temperatures</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         {/* Temperature sensor groups with min/max/avg */}
         {sortedCategories.map((category, idx) => {

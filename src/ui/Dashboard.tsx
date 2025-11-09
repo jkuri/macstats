@@ -3,11 +3,13 @@ import { Box, Text, useInput, useApp } from 'ink';
 import { SystemSection } from './sections/SystemSection.js';
 import { CPUSection } from './sections/CPUSection.js';
 import { RAMSection } from './sections/RAMSection.js';
+import { GPUSection } from './sections/GPUSection.js';
 import { BatterySection } from './sections/BatterySection.js';
 import { SensorsSection } from './sections/SensorsSection.js';
 import { DisksSection } from './sections/DisksSection.js';
 import { getSystemData } from '../system.js';
 import { getCpuData, getCPUUsage } from '../cpu.js';
+import { getGpuData } from '../gpu.js';
 import { getRAMUsage } from '../memory.js';
 import { getBatteryData } from '../battery.js';
 import { getFanData } from '../fan.js';
@@ -18,6 +20,7 @@ interface DashboardData {
   system: Awaited<ReturnType<typeof getSystemData>>;
   cpu: Awaited<ReturnType<typeof getCpuData>>;
   cpuUsage: Awaited<ReturnType<typeof getCPUUsage>>;
+  gpu: Awaited<ReturnType<typeof getGpuData>>;
   ram: Awaited<ReturnType<typeof getRAMUsage>>;
   battery: Awaited<ReturnType<typeof getBatteryData>> | null;
   sensors: Awaited<ReturnType<typeof getSensorData>>;
@@ -66,10 +69,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const fetchData = async () => {
     try {
-      const [system, cpu, cpuUsage, ram, battery, sensors, fans, disks] = await Promise.all([
+      const [system, cpu, cpuUsage, gpu, ram, battery, sensors, fans, disks] = await Promise.all([
         getSystemData(),
         getCpuData(),
         getCPUUsage(),
+        getGpuData(),
         getRAMUsage(),
         getBatteryData().catch(() => null),
         getSensorData(),
@@ -81,6 +85,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         system,
         cpu,
         cpuUsage,
+        gpu,
         ram,
         battery,
         sensors,
@@ -150,12 +155,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       <Box marginTop={1} />
 
-      {/* CPU and RAM - Side by side */}
+      {/* CPU, GPU, and RAM - Three columns */}
       <Box flexDirection="row">
-        <Box width="50%" paddingRight={1} flexDirection="column">
+        <Box width="33%" paddingRight={1} flexDirection="column">
           <CPUSection cpu={data.cpu} cpuUsage={data.cpuUsage} history={cpuHistory} showHistory={refreshInterval > 0} />
         </Box>
-        <Box width="50%" paddingLeft={1} flexDirection="column">
+        <Box width="33%" paddingRight={1} paddingLeft={1} flexDirection="column">
+          <GPUSection gpu={data.gpu} />
+        </Box>
+        <Box width="34%" paddingLeft={1} flexDirection="column">
           <RAMSection ram={data.ram} history={ramHistory} showHistory={refreshInterval > 0} />
         </Box>
       </Box>

@@ -41,10 +41,8 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
   const usageColor = getUsageColor(totalUsagePercent);
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" paddingX={1}>
-      <Text bold color="cyan">
-        💻 CPU Usage
-      </Text>
+    <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
+      <Text bold>💻 CPU Usage</Text>
       <Box flexDirection="column" paddingLeft={2} marginTop={1}>
         <Box flexDirection="row">
           <Box width={11}>
