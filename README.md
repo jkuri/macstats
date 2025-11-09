@@ -19,7 +19,7 @@ Node module for macOS system statistics. Get real-time CPU, GPU, battery, memory
 
 ## Example output
 
-<img width="1738" height="1134" alt="Screenshot 2025-11-09 at 01 23 33" src="https://github.com/user-attachments/assets/93154027-646a-426f-9dcc-bfa93753ff6d" />
+<img width="1674" height="794" alt="Screenshot 2025-11-09 at 09 56 11" src="https://github.com/user-attachments/assets/94a8bf9b-0775-4ed1-8a35-4deae8e932a1" />
 
 ## Installation
 
