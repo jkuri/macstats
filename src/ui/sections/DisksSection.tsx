@@ -21,7 +21,7 @@ const formatBytes = (bytes: number): string => {
   return `${gb.toFixed(0)} GB`;
 };
 
-export const DisksSection: React.FC<DisksSectionProps> = ({ disks, detailedMode = false }) => {
+const DisksSectionComponent: React.FC<DisksSectionProps> = ({ disks, detailedMode = false }) => {
   // In detailed mode, show all disks. Otherwise, filter to main disks only
   const displayDisks = detailedMode
     ? disks
@@ -81,3 +81,5 @@ export const DisksSection: React.FC<DisksSectionProps> = ({ disks, detailedMode 
     </Box>
   );
 };
+
+export const DisksSection = React.memo(DisksSectionComponent);

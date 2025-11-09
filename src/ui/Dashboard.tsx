@@ -51,7 +51,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
-  refreshInterval = 2000,
+  refreshInterval = 1000,
   detailedMode = false,
   exitAfterRender = false
 }) => {
@@ -60,8 +60,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [cpuHistory, setCpuHistory] = useState<CPUHistory[]>([]);
   const [ramHistory, setRamHistory] = useState<RAMHistory[]>([]);
   const [gpuHistory, setGpuHistory] = useState<GPUHistory[]>([]);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const hasExitedRef = useRef(false);
+  const lastUpdateRef = useRef<Date>(new Date());
 
   // Handle keyboard input
   useInput((input, key) => {
@@ -137,7 +137,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return newHistory.slice(-60);
       });
 
-      setLastUpdate(new Date());
+      lastUpdateRef.current = new Date();
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -169,12 +169,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }
 
   return (
-    <Box flexDirection="column">
+    <Box flexDirection="column" flexWrap="wrap">
       {/* System Information - Full width */}
       <SystemSection data={data.system} />
 
       {/* CPU, GPU, and RAM - Three columns */}
-      <Box flexDirection="row">
+      <Box flexDirection="row" flexWrap="wrap">
         <Box width="33%" paddingRight={1} flexDirection="column">
           <CPUSection cpu={data.cpu} cpuUsage={data.cpuUsage} history={cpuHistory} showHistory={refreshInterval > 0} />
         </Box>
@@ -187,7 +187,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </Box>
 
       {/* Battery and Sensors - Side by side */}
-      <Box flexDirection="row">
+      <Box flexDirection="row" flexWrap="wrap">
         <Box width="50%" paddingRight={1} flexDirection="column">
           {data.battery && <BatterySection battery={data.battery} />}
         </Box>
@@ -211,7 +211,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <Text bold color="yellow">
               r
             </Text>{' '}
-            to refresh | Last update: {lastUpdate.toLocaleTimeString()}
+            to refresh | Last update: {lastUpdateRef.current.toLocaleTimeString()}
           </Text>
         </Box>
       )}

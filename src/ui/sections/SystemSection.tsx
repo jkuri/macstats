@@ -6,7 +6,7 @@ interface SystemSectionProps {
   data: SystemInfo;
 }
 
-export const SystemSection: React.FC<SystemSectionProps> = ({ data }) => {
+const SystemSectionComponent: React.FC<SystemSectionProps> = ({ data }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
       <Text bold>🖥️ System Information</Text>
@@ -67,3 +67,5 @@ export const SystemSection: React.FC<SystemSectionProps> = ({ data }) => {
     </Box>
   );
 };
+
+export const SystemSection = React.memo(SystemSectionComponent);

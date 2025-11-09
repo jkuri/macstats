@@ -20,7 +20,7 @@ const createProgressBar = (percentage: number, width: number = 20): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-export const RAMSection: React.FC<RAMSectionProps> = ({ ram, history, showHistory = true }) => {
+const RAMSectionComponent: React.FC<RAMSectionProps> = ({ ram, history, showHistory = true }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
       <Text bold>🧠 RAM Usage</Text>
@@ -74,3 +74,5 @@ export const RAMSection: React.FC<RAMSectionProps> = ({ ram, history, showHistor
     </Box>
   );
 };
+
+export const RAMSection = React.memo(RAMSectionComponent);

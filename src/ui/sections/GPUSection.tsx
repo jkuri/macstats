@@ -20,7 +20,7 @@ const createProgressBar = (percentage: number, width: number = 15): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-export const GPUSection: React.FC<GPUSectionProps> = ({ gpu, history = [] }) => {
+const GPUSectionComponent: React.FC<GPUSectionProps> = ({ gpu, history = [] }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
       <Text bold>🎮 GPU</Text>
@@ -53,3 +53,5 @@ export const GPUSection: React.FC<GPUSectionProps> = ({ gpu, history = [] }) => 
     </Box>
   );
 };
+
+export const GPUSection = React.memo(GPUSectionComponent);

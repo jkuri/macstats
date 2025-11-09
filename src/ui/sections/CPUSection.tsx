@@ -21,7 +21,7 @@ const createProgressBar = (percentage: number, width: number = 20): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, showHistory = true }) => {
+const CPUSectionComponent: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, showHistory = true }) => {
   const totalUsagePercent = Math.round(cpuUsage.totalUsage * 100);
   const userPercent = Math.round(cpuUsage.userLoad * 100);
   const systemPercent = Math.round(cpuUsage.systemLoad * 100);
@@ -86,3 +86,5 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
     </Box>
   );
 };
+
+export const CPUSection = React.memo(CPUSectionComponent);

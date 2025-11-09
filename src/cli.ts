@@ -33,7 +33,7 @@ async function main(): Promise<void> {
 
     const { waitUntilExit } = render(
       React.createElement(Dashboard, {
-        refreshInterval: watchMode ? 2000 : 0,
+        refreshInterval: watchMode ? 1000 : 0,
         detailedMode: detailedMode,
         exitAfterRender: !watchMode
       }),

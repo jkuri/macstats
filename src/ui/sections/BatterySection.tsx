@@ -21,7 +21,7 @@ const getBatteryIcon = (percentage: number, isCharging: boolean): string => {
   return '🪫';
 };
 
-export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
+const BatterySectionComponent: React.FC<BatterySectionProps> = ({ battery }) => {
   // Determine status string
   let status = 'On Battery';
   if (battery.fully_charged) {
@@ -94,3 +94,5 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
     </Box>
   );
 };
+
+export const BatterySection = React.memo(BatterySectionComponent);

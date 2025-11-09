@@ -51,7 +51,7 @@ function calculateStats(values: number[]): { min: number; max: number; avg: numb
   };
 }
 
-export const SensorsSection: React.FC<SensorsSectionProps> = ({ sensors, fans }) => {
+const SensorsSectionComponent: React.FC<SensorsSectionProps> = ({ sensors, fans }) => {
   // Group temperature sensors by category
   const tempGroups = groupSensors(sensors.temperatures);
 
@@ -124,3 +124,5 @@ export const SensorsSection: React.FC<SensorsSectionProps> = ({ sensors, fans })
     </Box>
   );
 };
+
+export const SensorsSection = React.memo(SensorsSectionComponent);
