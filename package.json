@@ -1,18 +1,25 @@
 {
   "name": "macstats",
-  "version": "3.2.0",
+  "version": "4.0.0",
   "description": "Mac OS X statistics",
   "type": "module",
   "main": "./dist/index.js",
-  "preferGlobal": true,
   "bin": {
     "macstats": "bin/macstats"
   },
+  "files": [
+    "dist",
+    "bin",
+    "build/Release/smc.node",
+    "smc",
+    "binding.gyp"
+  ],
   "scripts": {
-    "prebuild": "node-gyp build",
-    "build": "tsc -p tsconfig.json",
+    "build:native": "node-gyp build",
+    "build:ts": "tsc -p tsconfig.json",
+    "build": "npm run build:native && npm run build:ts",
     "prepublishOnly": "npm run build",
-    "postinstall": "npm run build",
+    "postinstall": "node -e \"try { require('./build/Release/smc.node'); } catch(e) { require('child_process').execSync('npm run build:native', {stdio: 'inherit'}); }\"",
     "lint": "eslint 'src/**/*.{js,ts}' --quiet --fix",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -44,16 +51,14 @@
     "darwin"
   ],
   "dependencies": {
-    "@types/node": "^24.10.0",
     "chalk": "^5.6.2",
     "ink": "^6.4.0",
     "nan": "^2.23.1",
-    "node-gyp": "^11.5.0",
-    "react": "^19.2.0",
-    "typescript": "^5.9.3"
+    "react": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.46.3",
     "@typescript-eslint/parser": "^8.46.3",
@@ -61,7 +66,9 @@
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "node-gyp": "^11.5.0",
     "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.3",
     "vitest": "^4.0.8"
   }
