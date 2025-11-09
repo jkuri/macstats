@@ -179,7 +179,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <CPUSection cpu={data.cpu} cpuUsage={data.cpuUsage} history={cpuHistory} showHistory={refreshInterval > 0} />
         </Box>
         <Box width="33%" paddingRight={1} paddingLeft={1} flexDirection="column">
-          <GPUSection gpu={data.gpu} history={gpuHistory} />
+          <GPUSection gpu={data.gpu} history={gpuHistory} showHistory={refreshInterval > 0} />
         </Box>
         <Box width="34%" paddingLeft={1} flexDirection="column">
           <RAMSection ram={data.ram} history={ramHistory} showHistory={refreshInterval > 0} />

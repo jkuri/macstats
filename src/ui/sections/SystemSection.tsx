@@ -14,7 +14,7 @@ const SystemSectionComponent: React.FC<SystemSectionProps> = ({ data }) => {
         <Box>
           <Text>
             <Text dimColor>Model: </Text>
-            <Text bold>{data.modelName}</Text>
+            <Text>{data.modelName}</Text>
           </Text>
         </Box>
 

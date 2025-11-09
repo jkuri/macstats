@@ -30,7 +30,10 @@
 #include <nan.h>
 #include <node.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
+#include <string>
+#include <vector>
 #include <v8.h>
 #include <sys/sysctl.h>
 #include <sys/mount.h>
@@ -55,6 +58,22 @@ extern "C" {
   IOHIDFloat IOHIDEventGetFloatValue(IOHIDEventRef event, int32_t field);
 }
 
+// IOReport framework declarations (private APIs)
+extern "C" {
+  typedef struct __IOReportSubscriptionCF* IOReportSubscriptionRef;
+
+  CFDictionaryRef IOReportCopyChannelsInGroup(CFStringRef group, CFStringRef subgroup, uint64_t v0, uint64_t v1, uint64_t v2);
+  CFDictionaryRef IOReportCreateSamples(IOReportSubscriptionRef subscription, CFMutableDictionaryRef channels, CFTypeRef a);
+  CFDictionaryRef IOReportCreateSamplesDelta(CFDictionaryRef prev, CFDictionaryRef current, CFTypeRef a);
+  IOReportSubscriptionRef IOReportCreateSubscription(void* a, CFMutableDictionaryRef desiredChannels, CFMutableDictionaryRef* subbedChannels, uint64_t channel_id, CFTypeRef b);
+  int64_t IOReportSimpleGetIntegerValue(CFDictionaryRef sample, int entry);
+  CFStringRef IOReportChannelGetChannelName(CFDictionaryRef channel);
+  CFStringRef IOReportChannelGetGroup(CFDictionaryRef channel);
+  CFStringRef IOReportChannelGetSubGroup(CFDictionaryRef channel);
+  CFStringRef IOReportChannelGetUnitLabel(CFDictionaryRef channel);
+  void IOReportMergeChannels(CFDictionaryRef a, CFDictionaryRef b, CFTypeRef c);
+}
+
 // IOKit HID constants
 #define kIOHIDEventTypeTemperature 15
 #define kIOHIDEventTypePower 25
@@ -64,124 +83,170 @@ using namespace v8;
 
 static io_connect_t conn;
 
-// Get detailed Apple Silicon model
-AppleSiliconModel GetAppleSiliconModel() {
-  static AppleSiliconModel cached_model = MODEL_UNKNOWN;
+// Get chip generation from CPU brand string for SMC key selection
+ChipGeneration GetChipGeneration() {
+  static ChipGeneration cached_gen = CHIP_UNKNOWN;
 
-  if (cached_model != MODEL_UNKNOWN) {
-    return cached_model;
+  if (cached_gen != CHIP_UNKNOWN) {
+    return cached_gen;
   }
 
   char cpu_brand[128];
   size_t size = sizeof(cpu_brand);
 
   if (sysctlbyname("machdep.cpu.brand_string", &cpu_brand, &size, NULL, 0) != 0) {
-    cached_model = MODEL_INTEL;
-    return cached_model;
+    cached_gen = CHIP_INTEL;
+    return cached_gen;
   }
 
   // Check if Intel
   if (strstr(cpu_brand, "Intel") != NULL) {
-    cached_model = MODEL_INTEL;
-    return cached_model;
+    cached_gen = CHIP_INTEL;
+    return cached_gen;
   }
 
   // Check if Apple Silicon
   if (strstr(cpu_brand, "Apple") == NULL) {
-    cached_model = MODEL_INTEL;
-    return cached_model;
+    cached_gen = CHIP_INTEL;
+    return cached_gen;
   }
 
-  // Detect specific Apple Silicon model
-  if (strstr(cpu_brand, "M1") != NULL) {
-    if (strstr(cpu_brand, "Ultra") != NULL) {
-      cached_model = MODEL_M1_ULTRA;
-    } else if (strstr(cpu_brand, "Max") != NULL) {
-      cached_model = MODEL_M1_MAX;
-    } else if (strstr(cpu_brand, "Pro") != NULL) {
-      cached_model = MODEL_M1_PRO;
-    } else {
-      cached_model = MODEL_M1;
-    }
-  } else if (strstr(cpu_brand, "M2") != NULL) {
-    if (strstr(cpu_brand, "Ultra") != NULL) {
-      cached_model = MODEL_M2_ULTRA;
-    } else if (strstr(cpu_brand, "Max") != NULL) {
-      cached_model = MODEL_M2_MAX;
-    } else if (strstr(cpu_brand, "Pro") != NULL) {
-      cached_model = MODEL_M2_PRO;
-    } else {
-      cached_model = MODEL_M2;
-    }
-  } else if (strstr(cpu_brand, "M3") != NULL) {
-    if (strstr(cpu_brand, "Ultra") != NULL) {
-      cached_model = MODEL_M3_ULTRA;
-    } else if (strstr(cpu_brand, "Max") != NULL) {
-      cached_model = MODEL_M3_MAX;
-    } else if (strstr(cpu_brand, "Pro") != NULL) {
-      cached_model = MODEL_M3_PRO;
-    } else {
-      cached_model = MODEL_M3;
-    }
+  // Detect specific Apple Silicon generation (M1, M2, M3, M4, M5)
+  if (strstr(cpu_brand, "M5") != NULL) {
+    cached_gen = CHIP_M5;
   } else if (strstr(cpu_brand, "M4") != NULL) {
-    if (strstr(cpu_brand, "Ultra") != NULL) {
-      cached_model = MODEL_M4_ULTRA;
-    } else if (strstr(cpu_brand, "Max") != NULL) {
-      cached_model = MODEL_M4_MAX;
-    } else if (strstr(cpu_brand, "Pro") != NULL) {
-      cached_model = MODEL_M4_PRO;
-    } else {
-      cached_model = MODEL_M4;
-    }
-  } else if (strstr(cpu_brand, "M5") != NULL) {
-    if (strstr(cpu_brand, "Ultra") != NULL) {
-      cached_model = MODEL_M5_ULTRA;
-    } else if (strstr(cpu_brand, "Max") != NULL) {
-      cached_model = MODEL_M5_MAX;
-    } else if (strstr(cpu_brand, "Pro") != NULL) {
-      cached_model = MODEL_M5_PRO;
-    } else {
-      cached_model = MODEL_M5;
-    }
+    cached_gen = CHIP_M4;
+  } else if (strstr(cpu_brand, "M3") != NULL) {
+    cached_gen = CHIP_M3;
+  } else if (strstr(cpu_brand, "M2") != NULL) {
+    cached_gen = CHIP_M2;
+  } else if (strstr(cpu_brand, "M1") != NULL) {
+    cached_gen = CHIP_M1;
   } else {
-    // Unknown Apple Silicon model
-    cached_model = MODEL_M1; // Default to M1 keys as fallback
+    // Unknown Apple Silicon model - default to M1 keys as fallback
+    cached_gen = CHIP_M1;
   }
 
-  return cached_model;
-}
-
-// Get human-readable model name
-const char* GetModelName(AppleSiliconModel model) {
-  switch (model) {
-    case MODEL_INTEL: return "Intel";
-    case MODEL_M1: return "Apple M1";
-    case MODEL_M1_PRO: return "Apple M1 Pro";
-    case MODEL_M1_MAX: return "Apple M1 Max";
-    case MODEL_M1_ULTRA: return "Apple M1 Ultra";
-    case MODEL_M2: return "Apple M2";
-    case MODEL_M2_PRO: return "Apple M2 Pro";
-    case MODEL_M2_MAX: return "Apple M2 Max";
-    case MODEL_M2_ULTRA: return "Apple M2 Ultra";
-    case MODEL_M3: return "Apple M3";
-    case MODEL_M3_PRO: return "Apple M3 Pro";
-    case MODEL_M3_MAX: return "Apple M3 Max";
-    case MODEL_M3_ULTRA: return "Apple M3 Ultra";
-    case MODEL_M4: return "Apple M4";
-    case MODEL_M4_PRO: return "Apple M4 Pro";
-    case MODEL_M4_MAX: return "Apple M4 Max";
-    case MODEL_M4_ULTRA: return "Apple M4 Ultra";
-    case MODEL_M5: return "Apple M5";
-    case MODEL_M5_PRO: return "Apple M5 Pro";
-    case MODEL_M5_MAX: return "Apple M5 Max";
-    case MODEL_M5_ULTRA: return "Apple M5 Ultra";
-    default: return "Unknown";
-  }
+  return cached_gen;
 }
 
 // Check if running on Apple Silicon (backward compatibility)
 bool IsAppleSilicon() {
-  return GetAppleSiliconModel() != MODEL_INTEL;
+  return GetChipGeneration() != CHIP_INTEL;
+}
+
+// Comprehensive Mac Model Database
+// Based on public Mac model identifiers and release information
+// This database maps hardware model identifiers (e.g., "Mac15,6") to:
+// - Model description (e.g., "MacBook Pro")
+// - Screen size (e.g., "14-inch")
+// - Release date (e.g., "Nov 2023")
+// - Expected chip (e.g., "M3 Pro")
+//
+// This approach is inspired by macmon and eliminates hardcoded model checks,
+// making it easier to add support for new Mac models by simply adding entries
+// to this database rather than modifying conditional logic throughout the code.
+//
+// To add support for new Mac models:
+// 1. Find the hardware model identifier using: sysctl hw.model
+// 2. Add a new entry to the MAC_MODELS array with the relevant information
+// 3. Rebuild the module
+static const MacModelInfo MAC_MODELS[] = {
+  // M4 Generation (2024)
+  {"Mac16,1", "MacBook Pro", "14-inch", "Nov 2024", "M4"},
+  {"Mac16,2", "MacBook Pro", "14-inch", "Nov 2024", "M4"},
+  {"Mac16,3", "MacBook Pro", "14-inch", "Nov 2024", "M4"},
+  {"Mac16,5", "MacBook Pro", "16-inch", "Nov 2024", "M4 Pro"},
+  {"Mac16,6", "MacBook Pro", "14-inch", "Nov 2024", "M4 Pro"},
+  {"Mac16,7", "MacBook Pro", "16-inch", "Nov 2024", "M4 Pro"},
+  {"Mac16,8", "MacBook Pro", "14-inch", "Nov 2024", "M4 Max"},
+  {"Mac16,9", "MacBook Pro", "14-inch", "Nov 2024", "M4 Max"},
+  {"Mac16,10", "MacBook Pro", "16-inch", "Nov 2024", "M4 Max"},
+  {"Mac16,11", "MacBook Pro", "16-inch", "Nov 2024", "M4 Max"},
+  {"Mac16,12", "Mac mini", "", "Nov 2024", "M4"},
+  {"Mac16,13", "Mac mini", "", "Nov 2024", "M4 Pro"},
+  {"Mac17,1", "iMac", "24-inch", "Nov 2024", "M4"},
+
+  // M3 Generation (2023-2024)
+  {"Mac15,3", "MacBook Pro", "14-inch", "Nov 2023", "M3"},
+  {"Mac15,4", "iMac", "24-inch", "Nov 2023", "M3"},
+  {"Mac15,5", "iMac", "24-inch", "Nov 2023", "M3"},
+  {"Mac15,6", "MacBook Pro", "14-inch", "Nov 2023", "M3 Pro"},
+  {"Mac15,7", "MacBook Pro", "16-inch", "Nov 2023", "M3 Pro"},
+  {"Mac15,8", "MacBook Pro", "14-inch", "Nov 2023", "M3 Max"},
+  {"Mac15,9", "MacBook Pro", "14-inch", "Nov 2023", "M3 Max"},
+  {"Mac15,10", "MacBook Pro", "16-inch", "Nov 2023", "M3 Max"},
+  {"Mac15,11", "MacBook Pro", "16-inch", "Nov 2023", "M3 Max"},
+  {"Mac15,12", "MacBook Air", "13-inch", "Mar 2024", "M3"},
+  {"Mac15,13", "MacBook Air", "15-inch", "Mar 2024", "M3"},
+
+  // M2 Generation (2022-2023)
+  {"Mac14,2", "MacBook Air", "13-inch", "Jun 2022", "M2"},
+  {"Mac14,3", "Mac mini", "", "Jan 2023", "M2"},
+  {"Mac14,5", "MacBook Pro", "14-inch", "Jan 2023", "M2 Pro"},
+  {"Mac14,6", "MacBook Pro", "16-inch", "Jan 2023", "M2 Pro"},
+  {"Mac14,7", "MacBook Pro", "13-inch", "Jun 2022", "M2"},
+  {"Mac14,8", "Mac Studio", "", "Jun 2023", "M2 Max"},
+  {"Mac14,9", "MacBook Pro", "14-inch", "Jan 2023", "M2 Max"},
+  {"Mac14,10", "MacBook Pro", "16-inch", "Jan 2023", "M2 Max"},
+  {"Mac14,12", "Mac mini", "", "Jan 2023", "M2 Pro"},
+  {"Mac14,13", "Mac Studio", "", "Jun 2023", "M2 Ultra"},
+  {"Mac14,14", "Mac Studio", "", "Jun 2023", "M2 Ultra"},
+  {"Mac14,15", "MacBook Air", "15-inch", "Jun 2023", "M2"},
+
+  // M1 Generation (2020-2021)
+  {"MacBookAir10,1", "MacBook Air", "13-inch", "Nov 2020", "M1"},
+  {"MacBookPro17,1", "MacBook Pro", "13-inch", "Nov 2020", "M1"},
+  {"MacBookPro18,1", "MacBook Pro", "16-inch", "Oct 2021", "M1 Pro"},
+  {"MacBookPro18,2", "MacBook Pro", "16-inch", "Oct 2021", "M1 Max"},
+  {"MacBookPro18,3", "MacBook Pro", "14-inch", "Oct 2021", "M1 Pro"},
+  {"MacBookPro18,4", "MacBook Pro", "14-inch", "Oct 2021", "M1 Max"},
+  {"Macmini9,1", "Mac mini", "", "Nov 2020", "M1"},
+  {"iMac21,1", "iMac", "24-inch", "Apr 2021", "M1"},
+  {"iMac21,2", "iMac", "24-inch", "Apr 2021", "M1"},
+  {"Mac13,1", "Mac Studio", "", "Mar 2022", "M1 Max"},
+  {"Mac13,2", "Mac Studio", "", "Mar 2022", "M1 Ultra"},
+
+  // Intel Generation - Major Models (2017-2020)
+  {"MacBookPro14,1", "MacBook Pro", "13-inch", "Jun 2017", "Intel"},
+  {"MacBookPro14,2", "MacBook Pro", "13-inch", "Jun 2017", "Intel"},
+  {"MacBookPro14,3", "MacBook Pro", "15-inch", "Jun 2017", "Intel"},
+  {"MacBookPro15,1", "MacBook Pro", "15-inch", "Jul 2018", "Intel"},
+  {"MacBookPro15,2", "MacBook Pro", "13-inch", "Jul 2018", "Intel"},
+  {"MacBookPro15,3", "MacBook Pro", "15-inch", "May 2019", "Intel"},
+  {"MacBookPro15,4", "MacBook Pro", "13-inch", "Jul 2019", "Intel"},
+  {"MacBookPro16,1", "MacBook Pro", "16-inch", "Nov 2019", "Intel"},
+  {"MacBookPro16,2", "MacBook Pro", "13-inch", "May 2020", "Intel"},
+  {"MacBookPro16,3", "MacBook Pro", "13-inch", "May 2020", "Intel"},
+  {"MacBookPro16,4", "MacBook Pro", "16-inch", "Nov 2019", "Intel"},
+  {"MacBookAir8,1", "MacBook Air", "13-inch", "Oct 2018", "Intel"},
+  {"MacBookAir8,2", "MacBook Air", "13-inch", "Jul 2019", "Intel"},
+  {"MacBookAir9,1", "MacBook Air", "13-inch", "Mar 2020", "Intel"},
+  {"iMac19,1", "iMac", "27-inch", "Mar 2019", "Intel"},
+  {"iMac19,2", "iMac", "21.5-inch", "Mar 2019", "Intel"},
+  {"iMac20,1", "iMac", "27-inch", "Aug 2020", "Intel"},
+  {"iMac20,2", "iMac", "27-inch", "Aug 2020", "Intel"},
+  {"iMacPro1,1", "iMac Pro", "27-inch", "Dec 2017", "Intel"},
+  {"Macmini8,1", "Mac mini", "", "Oct 2018", "Intel"},
+  {"MacPro7,1", "Mac Pro", "", "Dec 2019", "Intel"},
+
+  // Terminator
+  {NULL, NULL, NULL, NULL, NULL}
+};
+
+// Lookup Mac model information from hardware identifier
+const MacModelInfo* LookupMacModel(const char* hw_model) {
+  if (!hw_model || hw_model[0] == '\0') {
+    return NULL;
+  }
+
+  for (int i = 0; MAC_MODELS[i].hw_model != NULL; i++) {
+    if (strcmp(MAC_MODELS[i].hw_model, hw_model) == 0) {
+      return &MAC_MODELS[i];
+    }
+  }
+
+  return NULL;
 }
 
 // IOKit HID sensor functions for Apple Silicon
@@ -300,12 +365,6 @@ IOKitSensorList GetIOKitCurrentSensors() {
   return GetIOKitSensors(0xff08, 2, kIOHIDEventTypePower);
 }
 
-IOKitSensorList GetIOKitPowerSensors() {
-  // kHIDPage_AppleVendorPowerSensor = 0xff08
-  // kHIDUsage_AppleVendorPowerSensor_Power = 0x0001
-  return GetIOKitSensors(0xff08, 1, kIOHIDEventTypePower);
-}
-
 void FreeIOKitSensorList(IOKitSensorList list) {
   if (list.sensors) {
     free(list.sensors);
@@ -350,6 +409,7 @@ kern_return_t SMCOpen(void) {
   io_iterator_t iterator;
   io_object_t device;
 
+  // Use AppleSMC to enumerate all services
   CFMutableDictionaryRef matchingDictionary = IOServiceMatching("AppleSMC");
   result = IOServiceGetMatchingServices(kIOMainPortDefault,
                                         matchingDictionary, &iterator);
@@ -358,15 +418,40 @@ kern_return_t SMCOpen(void) {
     return 1;
   }
 
-  device = IOIteratorNext(iterator);
+  // Match macmon: look for "AppleSMCKeysEndpoint" specifically for key enumeration
+  io_object_t found_device = 0;
+  while ((device = IOIteratorNext(iterator)) != 0) {
+    io_name_t name;
+    if (IORegistryEntryGetName(device, name) == kIOReturnSuccess) {
+      if (strcmp(name, "AppleSMCKeysEndpoint") == 0) {
+        found_device = device;
+        break;
+      }
+    }
+    IOObjectRelease(device);
+  }
   IOObjectRelease(iterator);
-  if (device == 0) {
+
+  if (found_device == 0) {
+    // Fallback to first AppleSMC device if AppleSMCKeysEndpoint not found
+    matchingDictionary = IOServiceMatching("AppleSMC");
+    result = IOServiceGetMatchingServices(kIOMainPortDefault,
+                                          matchingDictionary, &iterator);
+    if (result != kIOReturnSuccess) {
+      printf("Error: IOServiceGetMatchingServices() = %08x\n", result);
+      return 1;
+    }
+    found_device = IOIteratorNext(iterator);
+    IOObjectRelease(iterator);
+  }
+
+  if (found_device == 0) {
     printf("Error: no SMC found\n");
     return 1;
   }
 
-  result = IOServiceOpen(device, mach_task_self(), 0, &conn);
-  IOObjectRelease(device);
+  result = IOServiceOpen(found_device, mach_task_self(), 0, &conn);
+  IOObjectRelease(found_device);
   if (result != kIOReturnSuccess) {
     printf("Error: IOServiceOpen() = %08x\n", result);
     return 1;
@@ -430,113 +515,137 @@ kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val) {
   return kIOReturnSuccess;
 }
 
-// Get CPU temperature - matches exelban/stats implementation
+kern_return_t SMCReadKeyInfo(UInt32Char_t key, SMCKeyData_keyInfo_t *keyInfo) {
+  kern_return_t result;
+  SMCKeyData_t inputStructure;
+  SMCKeyData_t outputStructure;
+
+  memset(&inputStructure, 0, sizeof(SMCKeyData_t));
+  memset(&outputStructure, 0, sizeof(SMCKeyData_t));
+
+  inputStructure.key = _strtoul(key, 4, 16);
+  inputStructure.data8 = SMC_CMD_READ_KEYINFO;
+
+  result = SMCCall(KERNEL_INDEX_SMC, &inputStructure, &outputStructure);
+  if (result == kIOReturnSuccess) {
+    *keyInfo = outputStructure.keyInfo;
+  }
+
+  return result;
+}
+
+// Cache for discovered CPU temperature keys
+static std::vector<std::string> cpu_temp_keys_cache;
+static bool cpu_temp_keys_initialized = false;
+
+// Cache for discovered GPU temperature keys
+static std::vector<std::string> gpu_temp_keys_cache;
+static bool gpu_temp_keys_initialized = false;
+
+// Get CPU temperature - reads SMC temperature sensors directly
 double SMCGetTemperature() {
-  AppleSiliconModel model = GetAppleSiliconModel();
+  ChipGeneration gen = GetChipGeneration();
 
-  if (model == MODEL_INTEL) {
-    // Intel: use SMC
-    return SMCGetTemperatureKey(SMC_KEY_CPU_TEMP_INTEL);
+  if (gen == CHIP_INTEL) {
+    // Intel: use traditional SMC key
+    return SMCGetTemperatureKey("TC0P");
   }
 
-  // Apple Silicon: Try Intel SMC keys first (TC0D, TC0E, TC0F, TC0P, TC0H)
-  // These sometimes work on Apple Silicon
-  const char *intel_keys[] = {"TC0D", "TC0E", "TC0F", "TC0P", "TC0H"};
-  for (int i = 0; i < 5; i++) {
-    double temp = SMCGetTemperatureKey(intel_keys[i]);
-    if (temp > 0.0 && temp < 110.0) {
-      return temp;
+  // Initialize cache on first call - optimized scanning
+  if (!cpu_temp_keys_initialized) {
+    const char* prefixes[] = {"Tp", "Te"};
+
+    // Strategy: Check common patterns first, stop if we find enough
+    // Most Apple Silicon temp keys follow patterns like Tp01, Tp05, Te05, etc.
+
+    // Pattern 1: Numeric keys (0-9)(0-9) - covers 90% of cases
+    for (int p = 0; p < 2; p++) {
+      for (int i = 0; i <= 9; i++) {
+        for (int j = 0; j <= 9; j++) {
+          char key[5];
+          snprintf(key, sizeof(key), "%s%d%d", prefixes[p], i, j);
+
+          SMCVal_t val;
+          kern_return_t result = SMCReadKey(key, &val);
+
+          if (result == kIOReturnSuccess && val.dataSize == 4 && strcmp(val.dataType, DATATYPE_FLT) == 0) {
+            cpu_temp_keys_cache.push_back(key);
+          }
+        }
+      }
     }
+
+    // Pattern 2: Only check hex patterns (0-9)(a-f) if we need more coverage
+    // This adds keys like Tp0a, Tp0f, etc.
+    if (cpu_temp_keys_cache.size() < 20) {
+      for (int p = 0; p < 2; p++) {
+        for (int i = 0; i <= 9; i++) {
+          for (char j = 'a'; j <= 'f'; j++) {
+            char key[5];
+            snprintf(key, sizeof(key), "%s%d%c", prefixes[p], i, j);
+
+            SMCVal_t val;
+            kern_return_t result = SMCReadKey(key, &val);
+
+            if (result == kIOReturnSuccess && val.dataSize == 4 && strcmp(val.dataType, DATATYPE_FLT) == 0) {
+              cpu_temp_keys_cache.push_back(key);
+            }
+          }
+        }
+      }
+    }
+
+    cpu_temp_keys_initialized = true;
   }
 
-  // If Intel keys don't work, try model-specific SMC keys
-  const char **model_keys = NULL;
-  int key_count = 0;
+  // Read from cached keys
+  double total = 0.0;
+  int valid_count = 0;
 
-  switch (model) {
-    case MODEL_M1:
-    case MODEL_M1_PRO:
-    case MODEL_M1_MAX:
-    case MODEL_M1_ULTRA: {
-      static const char *m1_keys[] = {"Tp09", "Tp0T", "Tp01", "Tp05", "Tp0D", "Tp0H", "Tp0L", "Tp0P", "Tp0X", "Tp0b"};
-      model_keys = m1_keys;
-      key_count = 10;
-      break;
-    }
-    case MODEL_M2:
-    case MODEL_M2_PRO:
-    case MODEL_M2_MAX:
-    case MODEL_M2_ULTRA: {
-      static const char *m2_keys[] = {"Tp1h", "Tp1t", "Tp1p", "Tp1l", "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0X", "Tp0b", "Tp0f", "Tp0j"};
-      model_keys = m2_keys;
-      key_count = 12;
-      break;
-    }
-    case MODEL_M3:
-    case MODEL_M3_PRO:
-    case MODEL_M3_MAX:
-    case MODEL_M3_ULTRA: {
-      static const char *m3_keys[] = {"Te05", "Te0L", "Te0P", "Te0S", "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0D", "Tf0E", "Tf44", "Tf49", "Tf4A", "Tf4B", "Tf4D", "Tf4E"};
-      model_keys = m3_keys;
-      key_count = 16;
-      break;
-    }
-    case MODEL_M4:
-    case MODEL_M4_PRO:
-    case MODEL_M4_MAX:
-    case MODEL_M4_ULTRA: {
-      static const char *m4_keys[] = {"Te05", "Te09", "Te0H", "Te0S", "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0V", "Tp0Y", "Tp0b", "Tp0e"};
-      model_keys = m4_keys;
-      key_count = 12;
-      break;
-    }
-    default:
-      break;
-  }
+  for (const auto& key_str : cpu_temp_keys_cache) {
+    SMCVal_t val;
+    kern_return_t result = SMCReadKey((char*)key_str.c_str(), &val);
 
-  // Try to read model-specific SMC keys and average them
-  if (model_keys != NULL && key_count > 0) {
-    double total = 0.0;
-    int valid_count = 0;
+    if (result == kIOReturnSuccess && val.dataSize == 4 && strcmp(val.dataType, DATATYPE_FLT) == 0) {
+      float temp;
+      memcpy(&temp, val.bytes, sizeof(float));
 
-    for (int i = 0; i < key_count; i++) {
-      double temp = SMCGetTemperatureKey(model_keys[i]);
       if (temp > 0.0 && temp < 110.0) {
         total += temp;
         valid_count++;
       }
     }
-
-    if (valid_count > 0) {
-      return total / valid_count;
-    }
   }
 
-  // Fallback: use IOKit HID sensors
-  IOKitSensorList sensors = GetIOKitTemperatureSensors();
+  if (valid_count > 0) {
+    return total / valid_count;
+  }
 
+  // Fallback to IOKit HID sensors (for older M1 or systems without SMC access)
+  IOKitSensorList sensors = GetIOKitTemperatureSensors();
   if (sensors.count == 0) {
     FreeIOKitSensorList(sensors);
     return 0.0;
   }
 
-  double total = 0.0;
-  int valid_count = 0;
+  total = 0.0;
+  valid_count = 0;
 
   for (int i = 0; i < sensors.count; i++) {
-    if (sensors.sensors[i].value > 0.0) {
+    const char* name = sensors.sensors[i].name;
+
+    // Match macmon HID logic: pACC/eACC MTR Temp Sensor
+    bool is_cpu_sensor = (strstr(name, "pACC MTR Temp Sensor") != NULL) ||
+                         (strstr(name, "eACC MTR Temp Sensor") != NULL);
+
+    if (is_cpu_sensor && sensors.sensors[i].value > 0.0) {
       total += sensors.sensors[i].value;
       valid_count++;
     }
   }
 
   FreeIOKitSensorList(sensors);
-
-  if (valid_count > 0) {
-    return total / valid_count;
-  }
-
-  return 0.0;
+  return valid_count > 0 ? total / valid_count : 0.0;
 }
 
 double SMCGetTemperatureKey(const char *key) {
@@ -546,9 +655,19 @@ double SMCGetTemperatureKey(const char *key) {
   result = SMCReadKey((char *)key, &val);
   if (result == kIOReturnSuccess) {
     if (val.dataSize > 0) {
+      // Handle sp78 format (older chips)
       if (strcmp(val.dataType, DATATYPE_SP78) == 0) {
         int intValue = val.bytes[0] * 256 + (unsigned char)val.bytes[1];
         return intValue / 256.0;
+      }
+      // Handle flt  format (newer chips like M3) - macmon uses little-endian float
+      if (strcmp(val.dataType, DATATYPE_FLT) == 0 && val.dataSize == 4) {
+        // Read as little-endian float (macmon approach)
+        uint32_t intVal = (uint32_t)val.bytes[0] | ((uint32_t)val.bytes[1] << 8) |
+                          ((uint32_t)val.bytes[2] << 16) | ((uint32_t)val.bytes[3] << 24);
+        float temp;
+        memcpy(&temp, &intVal, 4);
+        return (double)temp;
       }
     }
   }
@@ -591,7 +710,7 @@ int SMCGetFanNumber() {
   SMCVal_t val;
   kern_return_t result;
 
-  result = SMCReadKey((char *)SMC_KEY_FAN_NUMBER, &val);
+  result = SMCReadKey((char *)"FNum", &val);
   if (result == kIOReturnSuccess) {
     // read succeeded - check returned value
     if (val.dataSize > 0) {
@@ -697,46 +816,31 @@ void CpuTemperatureDie(const FunctionCallbackInfo<Value> &args) {
   HandleScope scope(isolate);
   SMCOpen();
 
-  AppleSiliconModel model = GetAppleSiliconModel();
+  ChipGeneration gen = GetChipGeneration();
   const char *key;
 
-  // Select appropriate CPU die key based on model
-  switch (model) {
-    case MODEL_INTEL:
-      key = SMC_KEY_CPU_DIE_INTEL;
+  // Select appropriate CPU die key based on chip generation
+  switch (gen) {
+    case CHIP_INTEL:
+      key = "TC0D";
       break;
-    case MODEL_M1:
-    case MODEL_M1_PRO:
-    case MODEL_M1_MAX:
-    case MODEL_M1_ULTRA:
-      key = SMC_KEY_CPU_PCORE1_M1;
+    case CHIP_M1:
+      key = "Tp01";
       break;
-    case MODEL_M2:
-    case MODEL_M2_PRO:
-    case MODEL_M2_MAX:
-    case MODEL_M2_ULTRA:
-      key = SMC_KEY_CPU_PCORE1_M2;
+    case CHIP_M2:
+      key = "Tp01";
       break;
-    case MODEL_M3:
-    case MODEL_M3_PRO:
-    case MODEL_M3_MAX:
-    case MODEL_M3_ULTRA:
-      key = SMC_KEY_CPU_PCORE1_M3;
+    case CHIP_M3:
+      key = "Tf04";
       break;
-    case MODEL_M4:
-    case MODEL_M4_PRO:
-    case MODEL_M4_MAX:
-    case MODEL_M4_ULTRA:
-      key = SMC_KEY_CPU_PCORE1_M4;
+    case CHIP_M4:
+      key = "Tp01";
       break;
-    case MODEL_M5:
-    case MODEL_M5_PRO:
-    case MODEL_M5_MAX:
-    case MODEL_M5_ULTRA:
-      key = SMC_KEY_CPU_PCORE1_M4;  // Use M4 key as fallback for M5
+    case CHIP_M5:
+      key = "Tp01";  // Use M4 key as fallback for M5
       break;
     default:
-      key = SMC_KEY_CPU_DIE_INTEL;
+      key = "TC0D";
       break;
   }
 
@@ -749,86 +853,112 @@ void GpuTemperature(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
 
-  AppleSiliconModel model = GetAppleSiliconModel();
+  // Try IOKit HID sensors first (Apple Silicon) - macmon approach
+  // Look for "GPU MTR Temp Sensor" sensors
+  IOKitSensorList sensors = GetIOKitTemperatureSensors();
+  double total = 0.0;
+  int count = 0;
+
+  for (int i = 0; i < sensors.count; i++) {
+    const char *name = sensors.sensors[i].name;
+    // Check if sensor name starts with "GPU MTR Temp Sensor"
+    if (strncmp(name, "GPU MTR Temp Sensor", 19) == 0) {
+      double value = sensors.sensors[i].value;
+      if (value > 0.0) {
+        total += value;
+        count++;
+      }
+    }
+  }
+
+  FreeIOKitSensorList(sensors);
+
+  if (count > 0) {
+    args.GetReturnValue().Set(Number::New(isolate, total / count));
+    return;
+  }
+
+  // Fallback to SMC - scan for Tg** keys (macmon approach)
+  ChipGeneration gen = GetChipGeneration();
+
+  if (gen == CHIP_INTEL) {
+    // Intel: use traditional SMC key
+    SMCOpen();
+    double temperature = SMCGetTemperatureKey("TG0D");
+    SMCClose();
+    args.GetReturnValue().Set(Number::New(isolate, temperature));
+    return;
+  }
+
+  // Initialize GPU cache on first call - optimized scanning
+  if (!gpu_temp_keys_initialized) {
+    SMCOpen();
+
+    // Strategy: Check common patterns first
+    // GPU temp keys typically follow patterns like Tg05, Tg0f, etc.
+
+    // Pattern 1: Numeric keys (0-9)(0-9) - most common
+    for (int i = 0; i <= 9; i++) {
+      for (int j = 0; j <= 9; j++) {
+        char key[5];
+        snprintf(key, sizeof(key), "Tg%d%d", i, j);
+
+        SMCVal_t val;
+        kern_return_t result = SMCReadKey(key, &val);
+
+        if (result == kIOReturnSuccess && val.dataSize == 4 && strcmp(val.dataType, DATATYPE_FLT) == 0) {
+          gpu_temp_keys_cache.push_back(key);
+        }
+      }
+    }
+
+    // Pattern 2: Hex patterns (0-9)(a-f) - common for GPU sensors
+    for (int i = 0; i <= 9; i++) {
+      for (char j = 'a'; j <= 'f'; j++) {
+        char key[5];
+        snprintf(key, sizeof(key), "Tg%d%c", i, j);
+
+        SMCVal_t val;
+        kern_return_t result = SMCReadKey(key, &val);
+
+        if (result == kIOReturnSuccess && val.dataSize == 4 && strcmp(val.dataType, DATATYPE_FLT) == 0) {
+          gpu_temp_keys_cache.push_back(key);
+        }
+      }
+    }
+
+    SMCClose();
+    gpu_temp_keys_initialized = true;
+  }
+
+  // Read from cached keys
+  total = 0.0;
+  count = 0;
 
   SMCOpen();
+  for (const auto& key_str : gpu_temp_keys_cache) {
+    SMCVal_t val;
+    kern_return_t result = SMCReadKey((char*)key_str.c_str(), &val);
 
-  // For Apple Silicon M3, try to read multiple GPU temperature sensors and average them
-  if (model == MODEL_M3 || model == MODEL_M3_PRO || model == MODEL_M3_MAX || model == MODEL_M3_ULTRA) {
-    // M3 GPU temperature sensors (from header file definitions)
-    const char *gpu_keys[] = {
-      SMC_KEY_GPU1_M3,  // Tf14
-      SMC_KEY_GPU2_M3,  // Tf18
-      SMC_KEY_GPU3_M3,  // Tf19
-      SMC_KEY_GPU4_M3,  // Tf1A
-      SMC_KEY_GPU5_M3,  // Tf24
-      SMC_KEY_GPU6_M3,  // Tf28
-      SMC_KEY_GPU7_M3,  // Tf29
-      SMC_KEY_GPU8_M3   // Tf2A
-    };
-    double total = 0.0;
-    int count = 0;
+    if (result == kIOReturnSuccess && val.dataSize == 4 && strcmp(val.dataType, DATATYPE_FLT) == 0) {
+      float temp;
+      memcpy(&temp, val.bytes, sizeof(float));
 
-    for (int i = 0; i < 8; i++) {
-      double temp = SMCGetTemperatureKey(gpu_keys[i]);
-      if (temp > 0.0) {
+      if (temp > 0.0 && temp < 150.0) {
         total += temp;
         count++;
       }
     }
-
-    if (count > 0) {
-      SMCClose();
-      args.GetReturnValue().Set(Number::New(isolate, total / count));
-      return;
-    }
   }
-
-  const char *key;
-
-  // Select appropriate GPU key based on model
-  switch (model) {
-    case MODEL_INTEL:
-      key = SMC_KEY_GPU_TEMP_INTEL;
-      break;
-    case MODEL_M1:
-    case MODEL_M1_PRO:
-    case MODEL_M1_MAX:
-    case MODEL_M1_ULTRA:
-      key = SMC_KEY_GPU1_M1;
-      break;
-    case MODEL_M2:
-    case MODEL_M2_PRO:
-    case MODEL_M2_MAX:
-    case MODEL_M2_ULTRA:
-      key = SMC_KEY_GPU1_M2;
-      break;
-    case MODEL_M3:
-    case MODEL_M3_PRO:
-    case MODEL_M3_MAX:
-    case MODEL_M3_ULTRA:
-      key = SMC_KEY_GPU1_M3;
-      break;
-    case MODEL_M4:
-    case MODEL_M4_PRO:
-    case MODEL_M4_MAX:
-    case MODEL_M4_ULTRA:
-      key = SMC_KEY_GPU1_M4;
-      break;
-    case MODEL_M5:
-    case MODEL_M5_PRO:
-    case MODEL_M5_MAX:
-    case MODEL_M5_ULTRA:
-      key = SMC_KEY_GPU1_M5;
-      break;
-    default:
-      key = SMC_KEY_GPU_TEMP_INTEL;
-      break;
-  }
-
-  double temperature = SMCGetTemperatureKey(key);
   SMCClose();
-  args.GetReturnValue().Set(Number::New(isolate, temperature));
+
+  if (count > 0) {
+    args.GetReturnValue().Set(Number::New(isolate, total / count));
+    return;
+  }
+
+  // If no Tg keys found, return 0
+  args.GetReturnValue().Set(Number::New(isolate, 0.0));
 }
 
 void GpuUsage(const FunctionCallbackInfo<Value> &args) {
@@ -885,24 +1015,157 @@ void GpuUsage(const FunctionCallbackInfo<Value> &args) {
   args.GetReturnValue().Set(Number::New(isolate, usage));
 }
 
+// Cache for IOReport subscription (reused across calls for better performance)
+struct IOReportCache {
+  IOReportSubscriptionRef subscription;
+  CFMutableDictionaryRef subbedChannels;
+
+  IOReportCache() : subscription(NULL), subbedChannels(NULL) {}
+
+  ~IOReportCache() {
+    if (subscription) CFRelease(subscription);
+    if (subbedChannels) CFRelease(subbedChannels);
+  }
+};
+
+static IOReportCache* energyModelCache = nullptr;
+
+// Helper to convert energy to watts based on unit
+inline double ConvertEnergyToWatts(int64_t value, const char* unit, double duration_s) {
+  if (strcmp(unit, "mJ") == 0) {
+    return (value / 1000.0) / duration_s;
+  } else if (strcmp(unit, "uJ") == 0) {
+    return (value / 1000000.0) / duration_s;
+  } else if (strcmp(unit, "nJ") == 0) {
+    return (value / 1000000000.0) / duration_s;
+  }
+  return 0.0;
+}
+
+// Helper to check if channel name matches pattern
+inline bool MatchesChannelPattern(const char* name, const char* pattern) {
+  if (!pattern) return true;
+
+  if (strstr(pattern, "CPU") != NULL) {
+    // Match "CPU Energy" or anything ending with "CPU Energy" (e.g., "DIE_0_CPU Energy" for Ultra)
+    const char* energyPos = strstr(name, "CPU Energy");
+    return (energyPos != NULL && energyPos[10] == '\0');
+  } else if (strstr(pattern, "GPU") != NULL) {
+    // Match exactly "GPU Energy"
+    return (strcmp(name, "GPU Energy") == 0);
+  }
+
+  return false;
+}
+
+// Helper function to read IOReport power metrics (optimized like macmon)
+double GetIOReportPower(const char* group, const char* subgroup, const char* channel_pattern) {
+  // Initialize cache on first call
+  if (!energyModelCache) {
+    energyModelCache = new IOReportCache();
+
+    CFStringRef groupRef = CFStringCreateWithCString(kCFAllocatorDefault, group, kCFStringEncodingUTF8);
+    CFStringRef subgroupRef = subgroup ? CFStringCreateWithCString(kCFAllocatorDefault, subgroup, kCFStringEncodingUTF8) : NULL;
+
+    CFDictionaryRef channels = IOReportCopyChannelsInGroup(groupRef, subgroupRef, 0, 0, 0);
+    CFRelease(groupRef);
+    if (subgroupRef) CFRelease(subgroupRef);
+
+    if (!channels) return 0.0;
+
+    CFMutableDictionaryRef channelsMut = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, channels);
+    energyModelCache->subscription = IOReportCreateSubscription(NULL, channelsMut, &energyModelCache->subbedChannels, 0, NULL);
+    CFRelease(channels);
+    CFRelease(channelsMut);
+
+    if (!energyModelCache->subscription) return 0.0;
+  }
+
+  // Take multiple samples and average (like macmon does - improves accuracy)
+  const int numSamples = 1; // Single sample is fast enough for real-time monitoring
+  const int sampleIntervalMs = 100; // 100ms sample interval
+  double totalPower = 0.0;
+
+  for (int sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
+    // Get current sample
+    CFDictionaryRef sample1 = IOReportCreateSamples(energyModelCache->subscription, energyModelCache->subbedChannels, NULL);
+    if (!sample1) return 0.0;
+
+    // Wait for measurement interval
+    usleep(sampleIntervalMs * 1000);
+
+    // Get second sample
+    CFDictionaryRef sample2 = IOReportCreateSamples(energyModelCache->subscription, energyModelCache->subbedChannels, NULL);
+    if (!sample2) {
+      CFRelease(sample1);
+      return 0.0;
+    }
+
+    // Calculate delta
+    CFDictionaryRef delta = IOReportCreateSamplesDelta(sample1, sample2, NULL);
+    CFRelease(sample1);
+    CFRelease(sample2);
+
+    if (!delta) return 0.0;
+
+    // Parse results
+    double samplePower = 0.0;
+    CFArrayRef channels_array = (CFArrayRef)CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
+
+    if (channels_array && CFGetTypeID(channels_array) == CFArrayGetTypeID()) {
+      CFIndex count = CFArrayGetCount(channels_array);
+
+      for (CFIndex i = 0; i < count; i++) {
+        CFDictionaryRef channel = (CFDictionaryRef)CFArrayGetValueAtIndex(channels_array, i);
+        if (!channel) continue;
+
+        // Get channel name
+        CFStringRef channelName = IOReportChannelGetChannelName(channel);
+        if (!channelName) continue;
+
+        char name[256] = {0};
+        CFStringGetCString(channelName, name, sizeof(name), kCFStringEncodingUTF8);
+
+        // Pattern matching like macmon
+        if (!MatchesChannelPattern(name, channel_pattern)) continue;
+
+        // Get unit label
+        CFStringRef unit = IOReportChannelGetUnitLabel(channel);
+        if (!unit) continue;
+
+        char unitStr[32];
+        CFStringGetCString(unit, unitStr, sizeof(unitStr), kCFStringEncodingUTF8);
+
+        // Get value
+        int64_t value = IOReportSimpleGetIntegerValue(channel, 0);
+
+        // Convert to watts
+        samplePower += ConvertEnergyToWatts(value, unitStr, sampleIntervalMs / 1000.0);
+      }
+    }
+
+    CFRelease(delta);
+    totalPower += samplePower;
+  }
+
+  // Return average across samples
+  return totalPower / numSamples;
+}
+
 void CpuPower(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
 
-  // Try IOKit power sensors first (Apple Silicon)
-  IOKitSensorList sensors = GetIOKitPowerSensors();
-  if (sensors.count > 0 && sensors.sensors[0].value > 0) {
-    double power = sensors.sensors[0].value;
-    FreeIOKitSensorList(sensors);
-    args.GetReturnValue().Set(Number::New(isolate, power));
-    return;
-  }
-  FreeIOKitSensorList(sensors);
+  // Use IOReport (Apple Silicon) or SMC fallback (Intel)
+  double power = GetIOReportPower("Energy Model", NULL, "CPU Energy");
 
-  // Fallback to SMC (Intel)
-  SMCOpen();
-  double power = SMCGetPower(SMC_KEY_CPU_POWER);
-  SMCClose();
+  if (power == 0.0) {
+    // Fallback to SMC for Intel Macs
+    SMCOpen();
+    power = SMCGetPower("PCTR");
+    SMCClose();
+  }
+
   args.GetReturnValue().Set(Number::New(isolate, power));
 }
 
@@ -910,21 +1173,16 @@ void GpuPower(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
 
-  // Try IOKit power sensors first (Apple Silicon)
-  // GPU power is typically the second power sensor if available
-  IOKitSensorList sensors = GetIOKitPowerSensors();
-  if (sensors.count > 1 && sensors.sensors[1].value > 0) {
-    double power = sensors.sensors[1].value;
-    FreeIOKitSensorList(sensors);
-    args.GetReturnValue().Set(Number::New(isolate, power));
-    return;
-  }
-  FreeIOKitSensorList(sensors);
+  // Use IOReport (Apple Silicon) or SMC fallback (Intel)
+  double power = GetIOReportPower("Energy Model", NULL, "GPU Energy");
 
-  // Fallback to SMC (Intel)
-  SMCOpen();
-  double power = SMCGetPower(SMC_KEY_GPU_POWER);
-  SMCClose();
+  if (power == 0.0) {
+    // Fallback to SMC for Intel Macs
+    SMCOpen();
+    power = SMCGetPower("PGTR");
+    SMCClose();
+  }
+
   args.GetReturnValue().Set(Number::New(isolate, power));
 }
 
@@ -932,7 +1190,7 @@ void SystemPower(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   SMCOpen();
-  double power = SMCGetPower(SMC_KEY_SYSTEM_POWER);
+  double power = SMCGetPower("PSTR");
   SMCClose();
   args.GetReturnValue().Set(Number::New(isolate, power));
 }
@@ -941,7 +1199,7 @@ void CpuVoltage(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   SMCOpen();
-  double voltage = SMCGetVoltage(SMC_KEY_CPU_VOLTAGE);
+  double voltage = SMCGetVoltage("VC0C");
   SMCClose();
   args.GetReturnValue().Set(Number::New(isolate, voltage));
 }
@@ -950,7 +1208,7 @@ void GpuVoltage(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   SMCOpen();
-  double voltage = SMCGetVoltage(SMC_KEY_GPU_VOLTAGE);
+  double voltage = SMCGetVoltage("VG0C");
   SMCClose();
   args.GetReturnValue().Set(Number::New(isolate, voltage));
 }
@@ -959,19 +1217,9 @@ void MemoryVoltage(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   SMCOpen();
-  double voltage = SMCGetVoltage(SMC_KEY_MEMORY_VOLTAGE);
+  double voltage = SMCGetVoltage("VM0R");
   SMCClose();
   args.GetReturnValue().Set(Number::New(isolate, voltage));
-}
-
-void GetModelInfo(const FunctionCallbackInfo<Value> &args) {
-  Isolate *isolate = Isolate::GetCurrent();
-  HandleScope scope(isolate);
-
-  AppleSiliconModel model = GetAppleSiliconModel();
-  const char* model_name = GetModelName(model);
-
-  args.GetReturnValue().Set(String::NewFromUtf8(isolate, model_name).ToLocalChecked());
 }
 
 // Helper function for sensor callbacks
@@ -1146,12 +1394,6 @@ SystemInfo GetSystemInfo() {
     snprintf(info.os_version, sizeof(info.os_version), "macOS %s", os_release);
   }
 
-  // Get model name
-  AppleSiliconModel model = GetAppleSiliconModel();
-  const char* model_name = GetModelName(model);
-  strncpy(info.model_name, model_name, sizeof(info.model_name) - 1);
-  info.model_name[sizeof(info.model_name) - 1] = '\0';
-
   // Get hardware model (e.g., "Mac14,6")
   char hw_model[128];
   size_t hw_length = sizeof(hw_model);
@@ -1160,6 +1402,31 @@ SystemInfo GetSystemInfo() {
     info.hardware_model[sizeof(info.hardware_model) - 1] = '\0';
   } else {
     info.hardware_model[0] = '\0';
+  }
+
+  // Get model name from CPU brand string
+  char cpu_brand[128];
+  size_t cpu_size = sizeof(cpu_brand);
+  if (sysctlbyname("machdep.cpu.brand_string", &cpu_brand, &cpu_size, NULL, 0) == 0) {
+    // Extract just the chip name (e.g., "Apple M3 Pro" from full brand string)
+    if (strstr(cpu_brand, "Apple") != NULL) {
+      // Find the Apple chip part of the string
+      const char* apple_part = strstr(cpu_brand, "Apple");
+      strncpy(info.model_name, apple_part, sizeof(info.model_name) - 1);
+      info.model_name[sizeof(info.model_name) - 1] = '\0';
+      // Clean up any trailing whitespace or extra info
+      char* newline = strchr(info.model_name, '\n');
+      if (newline) *newline = '\0';
+    } else if (strstr(cpu_brand, "Intel") != NULL) {
+      strncpy(info.model_name, "Intel", sizeof(info.model_name) - 1);
+      info.model_name[sizeof(info.model_name) - 1] = '\0';
+    } else {
+      strncpy(info.model_name, "Unknown", sizeof(info.model_name) - 1);
+      info.model_name[sizeof(info.model_name) - 1] = '\0';
+    }
+  } else {
+    strncpy(info.model_name, "Unknown", sizeof(info.model_name) - 1);
+    info.model_name[sizeof(info.model_name) - 1] = '\0';
   }
 
   // Get serial number using IOKit
@@ -1208,71 +1475,23 @@ SystemInfo GetSystemInfo() {
   strncpy(info.os_codename, codename, sizeof(info.os_codename) - 1);
   info.os_codename[sizeof(info.os_codename) - 1] = '\0';
 
-  // Get screen size and release date from hardware model
-  // This is a mapping of known models - not exhaustive
+  // Get screen size and release date from hardware model database
   info.screen_size[0] = '\0';
   info.release_year[0] = '\0';
 
-  // M3 MacBook Pro models (Nov 2023)
-  if (strstr(hw_model, "Mac15,3") != NULL || strstr(hw_model, "Mac15,6") != NULL) {
-    strcpy(info.screen_size, "14-inch");
-    strcpy(info.release_year, "Nov 2023");
-  } else if (strstr(hw_model, "Mac15,7") != NULL || strstr(hw_model, "Mac15,8") != NULL ||
-             strstr(hw_model, "Mac15,9") != NULL || strstr(hw_model, "Mac15,10") != NULL ||
-             strstr(hw_model, "Mac15,11") != NULL) {
-    strcpy(info.screen_size, "16-inch");
-    strcpy(info.release_year, "Nov 2023");
-  }
-  // M3 MacBook Air models (Mar 2024)
-  else if (strstr(hw_model, "Mac15,12") != NULL) {
-    strcpy(info.screen_size, "13-inch");
-    strcpy(info.release_year, "Mar 2024");
-  } else if (strstr(hw_model, "Mac15,13") != NULL) {
-    strcpy(info.screen_size, "15-inch");
-    strcpy(info.release_year, "Mar 2024");
-  }
-  // M4 MacBook Pro models (Nov 2024)
-  else if (strstr(hw_model, "Mac16,1") != NULL || strstr(hw_model, "Mac16,6") != NULL) {
-    strcpy(info.screen_size, "14-inch");
-    strcpy(info.release_year, "Nov 2024");
-  } else if (strstr(hw_model, "Mac16,10") != NULL || strstr(hw_model, "Mac16,11") != NULL) {
-    strcpy(info.screen_size, "16-inch");
-    strcpy(info.release_year, "Nov 2024");
-  }
-  // M2 MacBook Pro models
-  else if (strstr(hw_model, "Mac14,5") != NULL || strstr(hw_model, "Mac14,9") != NULL) {
-    strcpy(info.screen_size, "14-inch");
-    strcpy(info.release_year, "Jan 2023");
-  } else if (strstr(hw_model, "Mac14,6") != NULL || strstr(hw_model, "Mac14,10") != NULL) {
-    strcpy(info.screen_size, "16-inch");
-    strcpy(info.release_year, "Jan 2023");
-  } else if (strstr(hw_model, "Mac14,7") != NULL) {
-    strcpy(info.screen_size, "13-inch");
-    strcpy(info.release_year, "Jun 2022");
-  }
-  // M2 MacBook Air models
-  else if (strstr(hw_model, "Mac14,2") != NULL) {
-    strcpy(info.screen_size, "13-inch");
-    strcpy(info.release_year, "Jun 2022");
-  } else if (strstr(hw_model, "Mac14,15") != NULL) {
-    strcpy(info.screen_size, "15-inch");
-    strcpy(info.release_year, "Jun 2023");
-  }
-  // M1 MacBook Pro models
-  else if (strstr(hw_model, "Mac14,12") != NULL || strstr(hw_model, "Mac14,14") != NULL) {
-    strcpy(info.screen_size, "14-inch");
-    strcpy(info.release_year, "Oct 2021");
-  } else if (strstr(hw_model, "Mac14,13") != NULL) {
-    strcpy(info.screen_size, "16-inch");
-    strcpy(info.release_year, "Oct 2021");
-  } else if (strstr(hw_model, "Mac14,1") != NULL) {
-    strcpy(info.screen_size, "13-inch");
-    strcpy(info.release_year, "Nov 2020");
-  }
-  // M1 MacBook Air
-  else if (strstr(hw_model, "MacBookAir10,1") != NULL) {
-    strcpy(info.screen_size, "13-inch");
-    strcpy(info.release_year, "Nov 2020");
+  const MacModelInfo* modelInfo = LookupMacModel(hw_model);
+  if (modelInfo) {
+    // Copy screen size if available
+    if (modelInfo->screen_size && modelInfo->screen_size[0] != '\0') {
+      strncpy(info.screen_size, modelInfo->screen_size, sizeof(info.screen_size) - 1);
+      info.screen_size[sizeof(info.screen_size) - 1] = '\0';
+    }
+
+    // Copy release date if available
+    if (modelInfo->release_date && modelInfo->release_date[0] != '\0') {
+      strncpy(info.release_year, modelInfo->release_date, sizeof(info.release_year) - 1);
+      info.release_year[sizeof(info.release_year) - 1] = '\0';
+    }
   }
 
   return info;
@@ -1770,7 +1989,6 @@ void Init(v8::Local<Object> exports, v8::Local<v8::Value> module, void* priv) {
   NODE_SET_METHOD(exports, "cpuVoltage", CpuVoltage);
   NODE_SET_METHOD(exports, "gpuVoltage", GpuVoltage);
   NODE_SET_METHOD(exports, "memoryVoltage", MemoryVoltage);
-  NODE_SET_METHOD(exports, "getModelInfo", GetModelInfo);
   NODE_SET_METHOD(exports, "getAllTemperatureSensors", GetAllTemperatureSensors);
   NODE_SET_METHOD(exports, "getAllVoltageSensors", GetAllVoltageSensors);
   NODE_SET_METHOD(exports, "getAllCurrentSensors", GetAllCurrentSensors);

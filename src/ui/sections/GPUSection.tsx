@@ -12,6 +12,7 @@ interface GPUHistory {
 interface GPUSectionProps {
   gpu: GPU;
   history?: GPUHistory[];
+  showHistory?: boolean;
 }
 
 const createProgressBar = (percentage: number, width: number = 15): string => {
@@ -20,7 +21,7 @@ const createProgressBar = (percentage: number, width: number = 15): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-const GPUSectionComponent: React.FC<GPUSectionProps> = ({ gpu, history = [] }) => {
+const GPUSectionComponent: React.FC<GPUSectionProps> = ({ gpu, history = [], showHistory = true }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
       <Text bold>🎮 GPU</Text>
@@ -35,13 +36,20 @@ const GPUSectionComponent: React.FC<GPUSectionProps> = ({ gpu, history = [] }) =
 
         <Box flexDirection="row">
           <Box width={11}>
+            <Text dimColor>Temp:</Text>
+          </Box>
+          <Text>{gpu.temperature}°C</Text>
+        </Box>
+
+        <Box flexDirection="row">
+          <Box width={11}>
             <Text dimColor>Power:</Text>
           </Box>
           <Text>{gpu.power.toFixed(2)}W</Text>
           {gpu.voltage > 0 && <Text dimColor> ({gpu.voltage.toFixed(2)}V)</Text>}
         </Box>
 
-        {history.length > 0 && (
+        {showHistory && history.length > 0 && (
           <Box flexDirection="row">
             <Box width={11}>
               <Text dimColor>History:</Text>
