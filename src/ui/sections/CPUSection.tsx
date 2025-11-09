@@ -21,24 +21,10 @@ const createProgressBar = (percentage: number, width: number = 20): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-const getUsageColor = (percentage: number): string => {
-  if (percentage >= 80) return 'red';
-  if (percentage >= 60) return 'yellow';
-  return 'green';
-};
-
-const getTempColor = (temp: number): string => {
-  if (temp >= 80) return 'red';
-  if (temp >= 60) return 'yellow';
-  return 'green';
-};
-
 export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, showHistory = true }) => {
   const totalUsagePercent = Math.round(cpuUsage.totalUsage * 100);
   const userPercent = Math.round(cpuUsage.userLoad * 100);
   const systemPercent = Math.round(cpuUsage.systemLoad * 100);
-
-  const usageColor = getUsageColor(totalUsagePercent);
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
@@ -48,9 +34,7 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
           <Box width={11}>
             <Text dimColor>Total:</Text>
           </Box>
-          <Text color={usageColor} bold>
-            {totalUsagePercent}%
-          </Text>
+          <Text bold>{totalUsagePercent}%</Text>
           <Text dimColor> {createProgressBar(totalUsagePercent, 15)}</Text>
         </Box>
 
@@ -58,9 +42,9 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
           <Box width={11}>
             <Text dimColor>User/Sys:</Text>
           </Box>
-          <Text color="blue">{userPercent}%</Text>
+          <Text>{userPercent}%</Text>
           <Text dimColor> / </Text>
-          <Text color="magenta">{systemPercent}%</Text>
+          <Text>{systemPercent}%</Text>
         </Box>
 
         <Box flexDirection="row">
@@ -76,7 +60,7 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
           <Box width={11}>
             <Text dimColor>Temp:</Text>
           </Box>
-          <Text color={getTempColor(cpu.temperature)}>{cpu.temperature}°C</Text>
+          <Text>{cpu.temperature}°C</Text>
           {cpu.temperatureDie > 0 && cpu.temperatureDie !== cpu.temperature && (
             <Text dimColor> (Die: {cpu.temperatureDie}°C)</Text>
           )}
@@ -86,7 +70,7 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
           <Box width={11}>
             <Text dimColor>Power:</Text>
           </Box>
-          <Text color="yellow">{cpu.power.toFixed(2)}W</Text>
+          <Text>{cpu.power.toFixed(2)}W</Text>
           {cpu.voltage > 0 && <Text dimColor> ({cpu.voltage.toFixed(2)}V)</Text>}
         </Box>
 
@@ -95,7 +79,7 @@ export const CPUSection: React.FC<CPUSectionProps> = ({ cpu, cpuUsage, history, 
             <Box width={11}>
               <Text dimColor>History:</Text>
             </Box>
-            <Sparkline data={history.map(h => h.usage)} width={30} color={usageColor} />
+            <Sparkline data={history.map(h => h.usage)} width={30} />
           </Box>
         )}
       </Box>

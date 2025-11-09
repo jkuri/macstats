@@ -38,6 +38,12 @@ interface RAMHistory {
   usedPercentage: number;
 }
 
+interface GPUHistory {
+  timestamp: number;
+  usage: number;
+  temperature: number;
+}
+
 interface DashboardProps {
   refreshInterval?: number;
   detailedMode?: boolean;
@@ -53,6 +59,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [data, setData] = useState<DashboardData | null>(null);
   const [cpuHistory, setCpuHistory] = useState<CPUHistory[]>([]);
   const [ramHistory, setRamHistory] = useState<RAMHistory[]>([]);
+  const [gpuHistory, setGpuHistory] = useState<GPUHistory[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const hasExitedRef = useRef(false);
 
@@ -117,6 +124,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
         return newHistory.slice(-60);
       });
 
+      // Update GPU history (keep last 60 data points)
+      setGpuHistory(prev => {
+        const newHistory = [
+          ...prev,
+          {
+            timestamp: Date.now(),
+            usage: gpu.usage,
+            temperature: gpu.temperature
+          }
+        ];
+        return newHistory.slice(-60);
+      });
+
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -153,22 +173,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* System Information - Full width */}
       <SystemSection data={data.system} />
 
-      <Box marginTop={1} />
-
       {/* CPU, GPU, and RAM - Three columns */}
       <Box flexDirection="row">
         <Box width="33%" paddingRight={1} flexDirection="column">
           <CPUSection cpu={data.cpu} cpuUsage={data.cpuUsage} history={cpuHistory} showHistory={refreshInterval > 0} />
         </Box>
         <Box width="33%" paddingRight={1} paddingLeft={1} flexDirection="column">
-          <GPUSection gpu={data.gpu} />
+          <GPUSection gpu={data.gpu} history={gpuHistory} />
         </Box>
         <Box width="34%" paddingLeft={1} flexDirection="column">
           <RAMSection ram={data.ram} history={ramHistory} showHistory={refreshInterval > 0} />
         </Box>
       </Box>
-
-      <Box marginTop={1} />
 
       {/* Battery and Sensors - Side by side */}
       <Box flexDirection="row">
@@ -180,15 +196,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </Box>
       </Box>
 
-      <Box marginTop={1} />
-
       {/* Disks - Full width */}
       <DisksSection disks={data.disks} detailedMode={detailedMode} />
 
       {/* Footer - only in watch mode */}
       {refreshInterval > 0 && (
-        <Box marginTop={1} borderStyle="round" borderColor="gray" paddingX={1}>
-          <Text dimColor>
+        <Box borderStyle="round" borderColor="gray" paddingX={1}>
+          <Text>
             Press{' '}
             <Text bold color="yellow">
               q

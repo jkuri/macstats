@@ -13,12 +13,6 @@ const createProgressBar = (percentage: number, width: number = 30): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-const getUsageColor = (percentage: number): string => {
-  if (percentage >= 90) return 'red';
-  if (percentage >= 75) return 'yellow';
-  return 'green';
-};
-
 const formatBytes = (bytes: number): string => {
   const gb = bytes / 1024 ** 3;
   if (gb >= 1000) {
@@ -53,29 +47,30 @@ export const DisksSection: React.FC<DisksSectionProps> = ({ disks, detailedMode 
       <Text bold>💾 Disks</Text>
       <Box marginTop={1} flexDirection="column" paddingLeft={2}>
         {mainDisks.map((disk, index) => {
-          const usageColor = getUsageColor(disk.usagePercent);
           const usedSize = formatBytes(disk.usedSize);
           const totalSize = formatBytes(disk.totalSize);
 
           return (
-            <Box key={index} flexDirection="column" marginBottom={index < mainDisks.length - 1 ? 1 : 0}>
-              <Box flexDirection="row">
-                <Box width={20}>
-                  <Text bold>{disk.name}</Text>
-                </Box>
-                <Text color={usageColor}>
-                  {usedSize} / {totalSize} ({Math.round(disk.usagePercent)}%)
+            <Box key={index} flexDirection="row" marginBottom={index < mainDisks.length - 1 ? 1 : 0}>
+              <Box width={18}>
+                <Text bold>{disk.name}</Text>
+              </Box>
+              <Box width={20}>
+                <Text>
+                  {usedSize} / {totalSize}
                 </Text>
               </Box>
-              <Box paddingLeft={2} flexDirection="row">
-                <Text color={usageColor}>{createProgressBar(disk.usagePercent, 50)}</Text>
+              <Box width={7}>
+                <Text>({Math.round(disk.usagePercent)}%)</Text>
+              </Box>
+              <Box width={25}>
+                <Text>{createProgressBar(disk.usagePercent, 25)}</Text>
               </Box>
               {disk.bsdName && (
-                <Box paddingLeft={2} flexDirection="row">
-                  <Text dimColor>
-                    {disk.mountPoint} • {disk.fileSystem} • {disk.bsdName}
-                  </Text>
-                </Box>
+                <Text>
+                  {' '}
+                  {disk.mountPoint} • {disk.fileSystem} • {disk.bsdName}
+                </Text>
               )}
             </Box>
           );

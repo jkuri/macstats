@@ -10,60 +10,58 @@ export const SystemSection: React.FC<SystemSectionProps> = ({ data }) => {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" paddingX={1} flexGrow={1}>
       <Text bold>🖥️ System Information</Text>
-      <Box marginTop={1} flexDirection="column" paddingLeft={2}>
-        <Box flexDirection="row">
-          <Box width={12}>
-            <Text dimColor>Model:</Text>
-          </Box>
-          <Text bold color="green">
-            {data.modelName}
+      <Box marginTop={1} flexDirection="row" paddingLeft={2} flexWrap="wrap" gap={3}>
+        <Box>
+          <Text>
+            <Text dimColor>Model: </Text>
+            <Text bold>{data.modelName}</Text>
           </Text>
         </Box>
 
         {data.hardwareModel && (
-          <Box flexDirection="row">
-            <Box width={12}>
-              <Text dimColor>Hardware:</Text>
-            </Box>
-            <Text color="green">
-              {data.hardwareModel}
-              {data.screenSize && data.releaseYear && ` (${data.screenSize}, ${data.releaseYear})`}
-              {data.screenSize && !data.releaseYear && ` (${data.screenSize})`}
-              {!data.screenSize && data.releaseYear && ` (${data.releaseYear})`}
+          <Box>
+            <Text>
+              <Text dimColor>Hardware: </Text>
+              <Text>
+                {data.hardwareModel}
+                {data.screenSize && data.releaseYear && ` (${data.screenSize}, ${data.releaseYear})`}
+                {data.screenSize && !data.releaseYear && ` (${data.screenSize})`}
+                {!data.screenSize && data.releaseYear && ` (${data.releaseYear})`}
+              </Text>
             </Text>
           </Box>
         )}
 
-        <Box flexDirection="row">
-          <Box width={12}>
-            <Text dimColor>OS:</Text>
-          </Box>
-          <Text color="green">
-            {data.osVersion} <Text dimColor>({data.osCodename})</Text>
+        <Box>
+          <Text>
+            <Text dimColor>OS: </Text>
+            <Text>
+              {data.osVersion} <Text>({data.osCodename})</Text>
+            </Text>
           </Text>
         </Box>
 
         {data.serialNumber && (
-          <Box flexDirection="row">
-            <Box width={12}>
-              <Text dimColor>Serial:</Text>
-            </Box>
-            <Text color="green">{data.serialNumber}</Text>
+          <Box>
+            <Text>
+              <Text dimColor>Serial: </Text>
+              <Text>{data.serialNumber}</Text>
+            </Text>
           </Box>
         )}
 
-        <Box flexDirection="row">
-          <Box width={12}>
-            <Text dimColor>RAM:</Text>
-          </Box>
-          <Text color="green">{data.totalMemoryGB} GB</Text>
+        <Box>
+          <Text>
+            <Text dimColor>RAM: </Text>
+            <Text>{data.totalMemoryGB} GB</Text>
+          </Text>
         </Box>
 
-        <Box flexDirection="row">
-          <Box width={12}>
-            <Text dimColor>Uptime:</Text>
-          </Box>
-          <Text color="green">{data.uptimeFormatted}</Text>
+        <Box>
+          <Text>
+            <Text dimColor>Uptime: </Text>
+            <Text>{data.uptimeFormatted}</Text>
+          </Text>
         </Box>
       </Box>
     </Box>

@@ -300,6 +300,12 @@ IOKitSensorList GetIOKitCurrentSensors() {
   return GetIOKitSensors(0xff08, 2, kIOHIDEventTypePower);
 }
 
+IOKitSensorList GetIOKitPowerSensors() {
+  // kHIDPage_AppleVendorPowerSensor = 0xff08
+  // kHIDUsage_AppleVendorPowerSensor_Power = 0x0001
+  return GetIOKitSensors(0xff08, 1, kIOHIDEventTypePower);
+}
+
 void FreeIOKitSensorList(IOKitSensorList list) {
   if (list.sensors) {
     free(list.sensors);
@@ -424,7 +430,7 @@ kern_return_t SMCReadKey(UInt32Char_t key, SMCVal_t *val) {
   return kIOReturnSuccess;
 }
 
-// Get average CPU temperature across all cores
+// Get CPU temperature - matches exelban/stats implementation
 double SMCGetTemperature() {
   AppleSiliconModel model = GetAppleSiliconModel();
 
@@ -433,7 +439,80 @@ double SMCGetTemperature() {
     return SMCGetTemperatureKey(SMC_KEY_CPU_TEMP_INTEL);
   }
 
-  // Apple Silicon: use IOKit HID sensors
+  // Apple Silicon: Try Intel SMC keys first (TC0D, TC0E, TC0F, TC0P, TC0H)
+  // These sometimes work on Apple Silicon
+  const char *intel_keys[] = {"TC0D", "TC0E", "TC0F", "TC0P", "TC0H"};
+  for (int i = 0; i < 5; i++) {
+    double temp = SMCGetTemperatureKey(intel_keys[i]);
+    if (temp > 0.0 && temp < 110.0) {
+      return temp;
+    }
+  }
+
+  // If Intel keys don't work, try model-specific SMC keys
+  const char **model_keys = NULL;
+  int key_count = 0;
+
+  switch (model) {
+    case MODEL_M1:
+    case MODEL_M1_PRO:
+    case MODEL_M1_MAX:
+    case MODEL_M1_ULTRA: {
+      static const char *m1_keys[] = {"Tp09", "Tp0T", "Tp01", "Tp05", "Tp0D", "Tp0H", "Tp0L", "Tp0P", "Tp0X", "Tp0b"};
+      model_keys = m1_keys;
+      key_count = 10;
+      break;
+    }
+    case MODEL_M2:
+    case MODEL_M2_PRO:
+    case MODEL_M2_MAX:
+    case MODEL_M2_ULTRA: {
+      static const char *m2_keys[] = {"Tp1h", "Tp1t", "Tp1p", "Tp1l", "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0X", "Tp0b", "Tp0f", "Tp0j"};
+      model_keys = m2_keys;
+      key_count = 12;
+      break;
+    }
+    case MODEL_M3:
+    case MODEL_M3_PRO:
+    case MODEL_M3_MAX:
+    case MODEL_M3_ULTRA: {
+      static const char *m3_keys[] = {"Te05", "Te0L", "Te0P", "Te0S", "Tf04", "Tf09", "Tf0A", "Tf0B", "Tf0D", "Tf0E", "Tf44", "Tf49", "Tf4A", "Tf4B", "Tf4D", "Tf4E"};
+      model_keys = m3_keys;
+      key_count = 16;
+      break;
+    }
+    case MODEL_M4:
+    case MODEL_M4_PRO:
+    case MODEL_M4_MAX:
+    case MODEL_M4_ULTRA: {
+      static const char *m4_keys[] = {"Te05", "Te09", "Te0H", "Te0S", "Tp01", "Tp05", "Tp09", "Tp0D", "Tp0V", "Tp0Y", "Tp0b", "Tp0e"};
+      model_keys = m4_keys;
+      key_count = 12;
+      break;
+    }
+    default:
+      break;
+  }
+
+  // Try to read model-specific SMC keys and average them
+  if (model_keys != NULL && key_count > 0) {
+    double total = 0.0;
+    int valid_count = 0;
+
+    for (int i = 0; i < key_count; i++) {
+      double temp = SMCGetTemperatureKey(model_keys[i]);
+      if (temp > 0.0 && temp < 110.0) {
+        total += temp;
+        valid_count++;
+      }
+    }
+
+    if (valid_count > 0) {
+      return total / valid_count;
+    }
+  }
+
+  // Fallback: use IOKit HID sensors
   IOKitSensorList sensors = GetIOKitTemperatureSensors();
 
   if (sensors.count == 0) {
@@ -441,7 +520,6 @@ double SMCGetTemperature() {
     return 0.0;
   }
 
-  // Calculate average of all temperature sensors
   double total = 0.0;
   int valid_count = 0;
 
@@ -618,7 +696,50 @@ void CpuTemperatureDie(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
   SMCOpen();
-  const char *key = IsAppleSilicon() ? SMC_KEY_CPU_PCORE1_M1 : SMC_KEY_CPU_DIE_INTEL;
+
+  AppleSiliconModel model = GetAppleSiliconModel();
+  const char *key;
+
+  // Select appropriate CPU die key based on model
+  switch (model) {
+    case MODEL_INTEL:
+      key = SMC_KEY_CPU_DIE_INTEL;
+      break;
+    case MODEL_M1:
+    case MODEL_M1_PRO:
+    case MODEL_M1_MAX:
+    case MODEL_M1_ULTRA:
+      key = SMC_KEY_CPU_PCORE1_M1;
+      break;
+    case MODEL_M2:
+    case MODEL_M2_PRO:
+    case MODEL_M2_MAX:
+    case MODEL_M2_ULTRA:
+      key = SMC_KEY_CPU_PCORE1_M2;
+      break;
+    case MODEL_M3:
+    case MODEL_M3_PRO:
+    case MODEL_M3_MAX:
+    case MODEL_M3_ULTRA:
+      key = SMC_KEY_CPU_PCORE1_M3;
+      break;
+    case MODEL_M4:
+    case MODEL_M4_PRO:
+    case MODEL_M4_MAX:
+    case MODEL_M4_ULTRA:
+      key = SMC_KEY_CPU_PCORE1_M4;
+      break;
+    case MODEL_M5:
+    case MODEL_M5_PRO:
+    case MODEL_M5_MAX:
+    case MODEL_M5_ULTRA:
+      key = SMC_KEY_CPU_PCORE1_M4;  // Use M4 key as fallback for M5
+      break;
+    default:
+      key = SMC_KEY_CPU_DIE_INTEL;
+      break;
+  }
+
   double temperature = SMCGetTemperatureKey(key);
   SMCClose();
   args.GetReturnValue().Set(Number::New(isolate, temperature));
@@ -627,9 +748,42 @@ void CpuTemperatureDie(const FunctionCallbackInfo<Value> &args) {
 void GpuTemperature(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
-  SMCOpen();
 
   AppleSiliconModel model = GetAppleSiliconModel();
+
+  SMCOpen();
+
+  // For Apple Silicon M3, try to read multiple GPU temperature sensors and average them
+  if (model == MODEL_M3 || model == MODEL_M3_PRO || model == MODEL_M3_MAX || model == MODEL_M3_ULTRA) {
+    // M3 GPU temperature sensors (from header file definitions)
+    const char *gpu_keys[] = {
+      SMC_KEY_GPU1_M3,  // Tf14
+      SMC_KEY_GPU2_M3,  // Tf18
+      SMC_KEY_GPU3_M3,  // Tf19
+      SMC_KEY_GPU4_M3,  // Tf1A
+      SMC_KEY_GPU5_M3,  // Tf24
+      SMC_KEY_GPU6_M3,  // Tf28
+      SMC_KEY_GPU7_M3,  // Tf29
+      SMC_KEY_GPU8_M3   // Tf2A
+    };
+    double total = 0.0;
+    int count = 0;
+
+    for (int i = 0; i < 8; i++) {
+      double temp = SMCGetTemperatureKey(gpu_keys[i]);
+      if (temp > 0.0) {
+        total += temp;
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      SMCClose();
+      args.GetReturnValue().Set(Number::New(isolate, total / count));
+      return;
+    }
+  }
+
   const char *key;
 
   // Select appropriate GPU key based on model
@@ -677,9 +831,75 @@ void GpuTemperature(const FunctionCallbackInfo<Value> &args) {
   args.GetReturnValue().Set(Number::New(isolate, temperature));
 }
 
+void GpuUsage(const FunctionCallbackInfo<Value> &args) {
+  Isolate *isolate = Isolate::GetCurrent();
+  HandleScope scope(isolate);
+
+  double usage = 0.0;
+
+  // Get IOAccelerator services
+  io_iterator_t iterator;
+  io_service_t service;
+  kern_return_t kr;
+
+  CFMutableDictionaryRef matchingDict = IOServiceMatching("IOAccelerator");
+  if (!matchingDict) {
+    args.GetReturnValue().Set(Number::New(isolate, 0.0));
+    return;
+  }
+
+  kr = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iterator);
+  if (kr != KERN_SUCCESS) {
+    args.GetReturnValue().Set(Number::New(isolate, 0.0));
+    return;
+  }
+
+  // Get the first GPU accelerator
+  service = IOIteratorNext(iterator);
+  if (service) {
+    CFDictionaryRef stats = (CFDictionaryRef)IORegistryEntryCreateCFProperty(
+      service, CFSTR("PerformanceStatistics"), kCFAllocatorDefault, 0);
+
+    if (stats) {
+      // Try to get Device Utilization %
+      CFNumberRef utilization = (CFNumberRef)CFDictionaryGetValue(stats, CFSTR("Device Utilization %"));
+      if (!utilization) {
+        // Fallback to GPU Activity(%)
+        utilization = (CFNumberRef)CFDictionaryGetValue(stats, CFSTR("GPU Activity(%)"));
+      }
+
+      if (utilization) {
+        int util_value = 0;
+        CFNumberGetValue(utilization, kCFNumberIntType, &util_value);
+        usage = (double)util_value / 100.0;
+        if (usage > 1.0) usage = 1.0;
+      }
+
+      CFRelease(stats);
+    }
+
+    IOObjectRelease(service);
+  }
+
+  IOObjectRelease(iterator);
+  args.GetReturnValue().Set(Number::New(isolate, usage));
+}
+
 void CpuPower(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
+
+  // Try IOKit power sensors first (Apple Silicon)
+  IOKitSensorList sensors = GetIOKitPowerSensors();
+  if (sensors.count > 0 && sensors.sensors[0].value > 0) {
+    double power = sensors.sensors[0].value;
+    FreeIOKitSensorList(sensors);
+    args.GetReturnValue().Set(Number::New(isolate, power));
+    return;
+  }
+  FreeIOKitSensorList(sensors);
+
+  // Fallback to SMC (Intel)
   SMCOpen();
   double power = SMCGetPower(SMC_KEY_CPU_POWER);
   SMCClose();
@@ -689,6 +909,19 @@ void CpuPower(const FunctionCallbackInfo<Value> &args) {
 void GpuPower(const FunctionCallbackInfo<Value> &args) {
   Isolate *isolate = Isolate::GetCurrent();
   HandleScope scope(isolate);
+
+  // Try IOKit power sensors first (Apple Silicon)
+  // GPU power is typically the second power sensor if available
+  IOKitSensorList sensors = GetIOKitPowerSensors();
+  if (sensors.count > 1 && sensors.sensors[1].value > 0) {
+    double power = sensors.sensors[1].value;
+    FreeIOKitSensorList(sensors);
+    args.GetReturnValue().Set(Number::New(isolate, power));
+    return;
+  }
+  FreeIOKitSensorList(sensors);
+
+  // Fallback to SMC (Intel)
   SMCOpen();
   double power = SMCGetPower(SMC_KEY_GPU_POWER);
   SMCClose();
@@ -1526,6 +1759,7 @@ void Init(v8::Local<Object> exports, v8::Local<v8::Value> module, void* priv) {
   NODE_SET_METHOD(exports, "temperature", Temperature);
   NODE_SET_METHOD(exports, "cpuTemperatureDie", CpuTemperatureDie);
   NODE_SET_METHOD(exports, "gpuTemperature", GpuTemperature);
+  NODE_SET_METHOD(exports, "gpuUsage", GpuUsage);
   NODE_SET_METHOD(exports, "fans", Fans);
   NODE_SET_METHOD(exports, "fanRpm", FanRpm);
   NODE_SET_METHOD(exports, "fanMin", FanMin);

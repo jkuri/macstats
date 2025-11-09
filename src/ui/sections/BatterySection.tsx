@@ -12,19 +12,6 @@ const createProgressBar = (percentage: number, width: number = 20): string => {
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
 
-const getBatteryColor = (percentage: number, isCharging: boolean): string => {
-  if (isCharging) return 'cyan';
-  if (percentage <= 20) return 'red';
-  if (percentage <= 50) return 'yellow';
-  return 'green';
-};
-
-const getHealthColor = (percentage: number): string => {
-  if (percentage >= 80) return 'green';
-  if (percentage >= 60) return 'yellow';
-  return 'red';
-};
-
 const getBatteryIcon = (percentage: number, isCharging: boolean): string => {
   if (isCharging) return '🔌';
   if (percentage >= 90) return '🔋';
@@ -46,8 +33,6 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
   }
 
   const isCharging = battery.is_charging || battery.fully_charged;
-  const batteryColor = getBatteryColor(battery.charge_percent, isCharging);
-  const healthColor = getHealthColor(battery.health_percent);
   const icon = getBatteryIcon(battery.charge_percent, isCharging);
 
   return (
@@ -58,21 +43,21 @@ export const BatterySection: React.FC<BatterySectionProps> = ({ battery }) => {
           <Box width={11}>
             <Text dimColor>Status:</Text>
           </Box>
-          <Text color={batteryColor} bold>
+          <Text bold>
             {status} ({battery.charge_percent}%)
           </Text>
         </Box>
 
         <Box flexDirection="row">
           <Box width={11} />
-          <Text color={batteryColor}>{createProgressBar(battery.charge_percent, 30)}</Text>
+          <Text>{createProgressBar(battery.charge_percent, 30)}</Text>
         </Box>
 
         <Box flexDirection="row">
           <Box width={11}>
             <Text dimColor>Health:</Text>
           </Box>
-          <Text color={healthColor}>
+          <Text>
             {battery.health_percent}% ({battery.max_capacity} / {battery.design_capacity} mAh)
           </Text>
         </Box>

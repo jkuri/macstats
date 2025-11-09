@@ -12,12 +12,6 @@ interface SensorGroup {
   [category: string]: Array<{ name: string; value: number }>;
 }
 
-const getTempColor = (temp: number): string => {
-  if (temp >= 80) return 'red';
-  if (temp >= 60) return 'yellow';
-  return 'green';
-};
-
 // Group sensors by category (same logic as cli.ts)
 function groupSensors(sensors: Array<{ name: string; value: number }>): SensorGroup {
   const groups: SensorGroup = {};
@@ -88,9 +82,7 @@ export const SensorsSection: React.FC<SensorsSectionProps> = ({ sensors, fans })
               <Box width={11}>
                 <Text dimColor>{category}:</Text>
               </Box>
-              <Text color={getTempColor(stats.avg)} bold>
-                {stats.avg.toFixed(1)}°C
-              </Text>
+              <Text bold>{stats.avg.toFixed(1)}°C</Text>
               <Text dimColor>
                 {' '}
                 ({stats.min.toFixed(1)}-{stats.max.toFixed(1)}°C)
@@ -107,7 +99,7 @@ export const SensorsSection: React.FC<SensorsSectionProps> = ({ sensors, fans })
                 <Box width={11}>
                   <Text dimColor>Fan #{index}:</Text>
                 </Box>
-                <Text color="cyan">{fan.rpm} RPM</Text>
+                <Text>{fan.rpm} RPM</Text>
                 {fan.min > 0 && fan.max > 0 && (
                   <Text dimColor>
                     {' '}
