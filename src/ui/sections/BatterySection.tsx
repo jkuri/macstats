@@ -7,7 +7,8 @@ interface BatterySectionProps {
 }
 
 const createProgressBar = (percentage: number, width: number = 20): string => {
-  const filled = Math.round((percentage / 100) * width);
+  const clamped = Math.max(0, Math.min(100, percentage));
+  const filled = Math.round((clamped / 100) * width);
   const empty = width - filled;
   return '█'.repeat(filled) + '░'.repeat(empty);
 };
